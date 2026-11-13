@@ -24,6 +24,10 @@
 ### Verified on the reference host
 - planned recreate: one suppressed window, 8727 ms downtime, no escalation
 - unexplained `docker stop`: escalation after 15.5 s, suppression released
+- broker restart inside a planned window: 1048 ms of downtime attributed, no escalation
+- Mosquitto ACL: dedicated user `z2mguard` cannot publish to `zigbee2mqtt/*` or a
+  foreign discovery topic (second-client listener received nothing) and cannot
+  subscribe to device topics; its own two discovery domains still publish
 - release artifacts: `static-pie linked` musl binary runs on alpine (`--version`,
   `--print-discovery` produce output), `SHA256SUMS` verifies, CycloneDX 1.5 SBOM
   with 118 components

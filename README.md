@@ -80,9 +80,8 @@ That posts an intent, then runs `docker compose up -d --force-recreate` for Z2M.
 - The guard observes; it does not restart anything.
 - Discovery republish storms are not reduced in v1 — that is the optional proxy
   mode (M5).
-- Runs against the broker with the existing service credentials. A dedicated
-  Mosquitto user + ACL is a hardening step that needs a coordinated broker
-  restart, so it is scheduled separately.
+- Runs under a dedicated Mosquitto user with a least-privilege ACL
+  (`deploy/mosquitto/acl.example`); it does not use the shared service credential.
 
 ## Build & release
 

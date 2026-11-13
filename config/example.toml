@@ -7,6 +7,9 @@
 [mqtt]
 url = "mqtt://172.22.1.50:1883"
 client_id = "z2m-guard"
+# Use a dedicated broker user, not the Home Assistant service account: the ACL in
+# deploy/mosquitto/acl.example grants it read on zigbee2mqtt/bridge/state, readwrite
+# on z2m_guard/# and write on its own discovery domains — nothing else.
 username = "z2mguard"
 # Reads the password from this environment variable.
 password_env = "Z2M_GUARD_MQTT_PASSWORD"

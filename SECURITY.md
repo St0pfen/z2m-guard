@@ -11,11 +11,12 @@ Deliberate non-goals: the guard cannot restart, stop or reconfigure Zigbee2MQTT.
 
 ## Trust boundaries
 
-- **MQTT credentials** — the guard needs the ability to subscribe to
-  `zigbee2mqtt/bridge/state` and publish its own topics. It is deployed with the
-  existing service credentials; a dedicated Mosquitto user with an ACL limited to
-  those topics is the recommended hardening step (needs a coordinated broker
-  restart, so it is a separate change).
+- **MQTT credentials** — the guard runs under a dedicated user `z2mguard` with an
+  ACL that grants exactly: read `zigbee2mqtt/bridge/state`, readwrite `z2m_guard/#`
+  and write access to its own two discovery domains. Everything else — device
+  topics, bridge commands, foreign discovery, `$SYS` — is denied. Rollout and the
+  acceptance checks are in `deploy/mosquitto/README.md`; the reference host runs
+  exactly this ACL.
 - **HTTP endpoint** — `POST /v1/restart-intent` requires a shared token
   (`Z2M_GUARD_HTTP_TOKEN`, compared in constant time). An accepted intent only
   opens a bounded suppression window; it cannot trigger any action.

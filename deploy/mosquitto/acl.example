@@ -1,0 +1,28 @@
+# Mosquitto ACL: least privilege for z2m-guard
+#
+# Drop-in for /mosquitto/config/acl and add to mosquitto.conf:
+#     acl_file /mosquitto/config/acl
+#
+# Two facts that make this safe to roll out:
+#  1. With acl_file set, an authenticated user has NO rights unless listed here.
+#  2. MQTT does not report ACL denials to the publisher at QoS 0/1 — a denied
+#     publish is silently dropped and still gets its PUBACK. The only proof is a
+#     second client listening on the topic and receiving nothing.
+
+# The existing service user keeps its broad access: Home Assistant subscribes to
+# homeassistant/#, Zigbee2MQTT publishes every device topic, Node-RED bridges.
+user hass
+topic readwrite #
+
+# z2m-guard gets exactly what it uses, nothing else.
+user z2mguard
+# reads the shared availability topic of all Zigbee entities
+topic read zigbee2mqtt/bridge/state
+# its own verdict topics (state, suppress, availability, last_restart)
+topic readwrite z2m_guard/#
+# its own Home Assistant discovery configs — and only those two domains
+topic write homeassistant/binary_sensor/z2m_guard/#
+topic write homeassistant/sensor/z2m_guard/#
+
+# Not granted, on purpose: any device topic (zigbee2mqtt/<device>), bridge
+# commands (zigbee2mqtt/bridge/request/#), foreign discovery topics, $SYS.
