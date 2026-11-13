@@ -1,0 +1,28 @@
+# Home Assistant package example for z2m-guard.
+#
+# The three entities below are created by MQTT discovery at runtime — nothing
+# here creates them. This file only shows how to *use* the marker so a routine
+# container recreate stops waking you up.
+#
+# Install: copy to /config/packages/z2m_guard.yaml and make sure
+# `homeassistant: packages: !include_dir_named packages` is enabled.
+
+# Alarms that watch Zigbee availability should require the marker to be off.
+# Template form, usable inside any automation condition:
+#
+#   - condition: template
+#     value_template: "{{ is_state('binary_sensor.z2m_guard_suppress', 'off') }}"
+#
+# Or point the automation's trigger at the marker instead of the entities.
+
+template:
+  - binary_sensor:
+      - name: "Zigbee outage unplanned"
+        unique_id: zigbee_outage_unplanned
+        device_class: problem
+        state: >-
+          {{ is_state('sensor.z2m_guard_state', 'outage_confirmed')
+             and not is_state('binary_sensor.z2m_guard_suppress', 'on') }}
+        attributes:
+          guard_state: "{{ states('sensor.z2m_guard_state') }}"
+          last_downtime: "{{ states('sensor.z2m_guard_last_restart') }}"

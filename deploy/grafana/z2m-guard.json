@@ -1,0 +1,53 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 0,
+  "title": "Z2M Guard",
+  "uid": "z2m-guard",
+  "time": { "from": "now-24h", "to": "now" },
+  "refresh": "1m",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Suppressed restart windows (by reason)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by (reason) (increase(z2m_guard_suppressed_events_total[$__rate_interval]))",
+          "legendFormat": "{{reason}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Unattributed outages (24h)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "increase(z2m_guard_outage_confirmed_total[24h])" }
+      ],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } } }
+    },
+    {
+      "type": "stat",
+      "title": "Suppression window open",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 },
+      "targets": [ { "expr": "z2m_guard_window_active" } ],
+      "fieldConfig": { "defaults": { "mappings": [ { "type": "value", "options": { "0": { "text": "closed", "color": "green" }, "1": { "text": "OPEN", "color": "orange" } } } ] } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Bridge-state messages and flaps",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "increase(z2m_guard_mqtt_messages_total[5m])", "legendFormat": "bridge messages" },
+        { "expr": "increase(z2m_guard_flaps_total[5m])", "legendFormat": "flaps" }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "version": 1
+}

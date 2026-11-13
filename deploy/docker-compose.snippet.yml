@@ -1,0 +1,39 @@
+# Compose service for z2m-guard — paste into the compose file of your
+# Home Assistant / Zigbee2MQTT stack.
+#
+# Requirements:
+#   - .env next to the compose file with Z2M_GUARD_MQTT_PASSWORD and
+#     Z2M_GUARD_HTTP_TOKEN (chmod 600, never commit it)
+#   - ./z2m-guard/config.toml mounted read-only
+#   - the `monitoring_default` network only if Prometheus should scrape it
+#
+# The guard publishes no host ports: metrics are scraped over the network, the
+# restart-intent endpoint is reached from inside the network.
+
+services:
+  z2m-guard:
+    container_name: z2m-guard
+    image: z2m-guard:local
+    restart: always
+    read_only: true
+    labels:
+      - com.centurylinklabs.watchtower.enable=false
+    environment:
+      - TZ=Europe/Berlin
+      - RUST_LOG=info
+      - Z2M_GUARD_MQTT_PASSWORD=${Z2M_GUARD_MQTT_PASSWORD}
+      - Z2M_GUARD_HTTP_TOKEN=${Z2M_GUARD_HTTP_TOKEN}
+    volumes:
+      - ./z2m-guard/config.toml:/config.toml:ro
+    command: ["--config", "/config.toml"]
+    networks:
+      hass_net:
+        ipv4_address: 172.22.1.51
+      monitoring:
+        aliases:
+          - z2m-guard
+
+networks:
+  monitoring:
+    external: true
+    name: monitoring_default
