@@ -53,6 +53,7 @@
 - Tests: 42 → **47**
 
 ### Verified on the reference host
+- remote builder over SSH documented and measured: 707 s wall time on a 24-thread WSL2 guest, binaries byte-identical to the local build (`amd64` `45110296…`, `arm64` `9015c100…`) even though the archive `index` digest differs (BuildKit 0.30 emits attestation manifests)
 - multi-arch OCI archive: `index digest sha256:57b0bd05944f7f`, amd64 and arm64 binaries both report `z2m-guard 0.1.0` (arm64 under qemu)
 - planned recreate: one suppressed window, 8727 ms downtime, no escalation
 - unexplained `docker stop`: escalation after 15.5 s, suppression released

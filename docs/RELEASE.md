@@ -70,6 +70,44 @@ binfmt entry the arm64 leg dies with "exec format error". Expect ~15 minutes for
 arm64 under emulation on a cold cache — the Dockerfile's cache mounts exist for
 exactly that reason.
 
+### Offloading the build to another machine
+
+The build can run on any host with a Docker daemon reachable over SSH; the OCI
+archive is exported back to the calling machine, so no registry is needed.
+
+```bash
+# on the caller
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N ""      # once
+ssh-copy-id -p 556 user@builder-host
+cat >> ~/.ssh/config <<'EOF'
+Host wsl-build
+    HostName 192.168.1.2
+    Port 556
+    User stopfen
+EOF
+
+docker context create remote --docker "host=ssh://wsl-build"
+docker buildx create --name z2m-remote --driver docker-container --use remote
+docker buildx inspect --bootstrap
+docker buildx build --builder z2m-remote --platform linux/amd64,linux/arm64 \
+  -t z2m-guard:<version> --output type=oci,dest=dist/z2m-guard-<version>.oci.tar .
+```
+
+The remote host needs `docker.io` **and** `docker-buildx` (Debian/Ubuntu ship the
+plugin separately) plus `tonistiigi/binfmt --install arm64`. If the daemon is only
+reachable through a port forward (WSL2 in NAT mode), the forwarded port changes
+whenever the guest gets a new IP — mirror the port forward in a logon task instead
+of assuming stability.
+
+Measured on the reference setup (6-core host vs. 24-thread WSL2 guest, both cold
+cache): **707 s** wall time on the guest; the earlier local run was not timed with
+`time`, it took roughly ten minutes. The extracted binaries are byte-identical
+(`amd64` sha256 prefix `45110296…`, `arm64` `9015c100…`). The resulting `index`
+digest differs between builders because
+BuildKit 0.30 emits per-platform attestation manifests that 0.2x does not; the
+payload is unaffected. Reproducibility claim therefore rests on binary hashes, not
+on the archive digest.
+
 ## 5. Tag (local, private repo)
 
 ```bash
