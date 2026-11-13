@@ -48,6 +48,10 @@ swallowed. Proven by property tests over random input sequences.
 
 ## Deploy
 
+Step-by-step guide: **`docs/INSTALL.md`** — compose variant, systemd variant, HA
+entities, ACL, monitoring, troubleshooting, and why HACS/the Marketplace cannot
+install this.
+
 ```bash
 docker build -t z2m-guard:local .
 # service definition: deploy/docker-compose.snippet.yml
