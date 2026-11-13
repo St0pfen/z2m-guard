@@ -28,8 +28,14 @@ Record the actual numbers (`test result: ok. N passed`), not "tests pass".
 Produces in `dist/`:
 
 - `z2m-guard-<version>-x86_64-unknown-linux-musl` — static, no glibc dependency
-- `SHA256SUMS`
+- `SHA256SUMS` — covers every artifact in the directory
 - `z2m-guard-<version>.cdx.json` — CycloneDX 1.5 SBOM from the real lockfile
+- `THIRD-PARTY-LICENSES.txt` — verbatim licence texts of all linked crates
+- `LICENSE-MIT`, `LICENSE-APACHE` — the project's own terms
+
+The licence files and notices are not decoration: MIT, BSD, ISC and Apache all
+require their text to be redistributed with a compiled binary, so they travel
+next to it and are covered by `SHA256SUMS`.
 
 The script runs the build as the calling user inside `z2m-guard-artifacts:local`,
 so nothing in `dist/` ends up root-owned. Two traps it already handles:

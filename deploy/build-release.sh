@@ -39,7 +39,13 @@ docker run --rm \
   "
 
 cd dist
-sha256sum "$BIN" > SHA256SUMS
+# Notices travel with the binary: MIT/BSD/ISC/Apache terms require the licence
+# text and attribution to be redistributed alongside a compiled artifact.
+cp ../LICENSE-MIT ../LICENSE-APACHE .
+( cd .. && python3 scripts/license-notices.py )
+sha256sum "$BIN" "z2m-guard-${VERSION}.cdx.json" \
+  LICENSE-MIT LICENSE-APACHE THIRD-PARTY-LICENSES.txt > SHA256SUMS
+sha256sum -c SHA256SUMS
 echo "== artifacts in $(pwd)"
 ls -l
 file "$BIN" || true

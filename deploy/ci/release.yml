@@ -66,12 +66,22 @@ jobs:
       - name: CycloneDX SBOM
         run: |
           cargo install cargo-cyclonedx --locked
-          cargo cyclonedx --format json --output-cdx --spec-version 1.5
+          # this cargo-cyclonedx has no --output-cdx: it writes next to the manifest
+          cargo cyclonedx --manifest-path crates/z2m-guard/Cargo.toml \
+            --format json --spec-version 1.5
           mv crates/z2m-guard/z2m-guard.cdx.json "z2m-guard-${GITHUB_REF_NAME#v}.cdx.json"
+      - name: Third-party licence notices
+        run: |
+          python3 scripts/license-notices.py
+          cp LICENSE-MIT LICENSE-APACHE dist/
       - uses: actions/upload-artifact@v4
         with:
           name: sbom
-          path: z2m-guard-*.cdx.json
+          path: |
+            z2m-guard-*.cdx.json
+            dist/THIRD-PARTY-LICENSES.txt
+            dist/LICENSE-MIT
+            dist/LICENSE-APACHE
 
   release:
     needs: [build, sbom]

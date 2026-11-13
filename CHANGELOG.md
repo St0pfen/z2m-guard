@@ -21,6 +21,15 @@
 - Docs: `docs/ARCHITECTURE.md` (decisions), `docs/RELEASE.md` (checklist),
   `SECURITY.md` (threat model), `docs/ANNOUNCEMENT.md` (draft).
 
+### Licensing
+- dual `MIT OR Apache-2.0` with both texts in the repo; README states the choice,
+  the GPLv3 compatibility and the no-CLA contribution rule
+- `THIRD-PARTY.md` + `scripts/license-notices.py`: the shipped binary links 143
+  third-party crates, all permissive (MIT/Apache-2.0/BSD-3-Clause/ISC/Unlicense/
+  Unicode-3.0); every licence text is reproduced in `THIRD-PARTY-LICENSES.txt`
+- release artifacts carry `LICENSE-MIT`, `LICENSE-APACHE` and the notices file,
+  all covered by `SHA256SUMS` — binary redistribution keeps the attribution terms
+
 ### Verified on the reference host
 - planned recreate: one suppressed window, 8727 ms downtime, no escalation
 - unexplained `docker stop`: escalation after 15.5 s, suppression released
