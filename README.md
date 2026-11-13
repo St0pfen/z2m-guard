@@ -43,7 +43,7 @@ an optional MQTT proxy that also collapses discovery republish storms.
 
 - [x] M0 — workspace, licences, CI
 - [x] M1 — core state machine (pure, 20 tests incl. 3 properties)
-- [ ] M2 — MQTT + Home Assistant discovery
+- [x] M2 — MQTT + Home Assistant discovery
 - [ ] M3 — attribution (Docker events / pre-restart signal) + deployment
 - [ ] M4 — release artifacts, docs, announcement
 - [ ] M5 — optional proxy mode

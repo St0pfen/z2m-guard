@@ -1,0 +1,36 @@
+# z2m-guard example configuration.
+#
+# Copy to config/local.toml (git-ignored) and adjust.
+# Secrets are never stored here — they come from the environment variables
+# named below.
+
+[mqtt]
+url = "mqtt://172.22.1.50:1883"
+client_id = "z2m-guard"
+username = "z2mguard"
+# Reads the password from this environment variable.
+password_env = "Z2M_GUARD_MQTT_PASSWORD"
+base_topic = "zigbee2mqtt"
+
+[guard]
+# How long an *unexplained* outage may stay suppressed before it escalates.
+grace_ms = 15000
+# How long suppression is held after the bridge returns (mesh settling).
+settle_ms = 20000
+# A container exit only explains an outage if it happened this close to it.
+attribution_window_ms = 30000
+# Cap for a restart announced in advance.
+prior_window_ms = 120000
+# Housekeeping tick, so windows expire even without broker traffic.
+tick_ms = 1000
+
+[homeassistant]
+discovery_prefix = "homeassistant"
+device_name = "Z2M Guard"
+# Set false for an observe-only run that creates no entities.
+discovery = true
+
+[http]
+# Keep it on the internal Docker network; no host port needed.
+bind = "0.0.0.0:8089"
+token_env = "Z2M_GUARD_HTTP_TOKEN"
