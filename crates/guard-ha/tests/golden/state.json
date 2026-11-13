@@ -1,0 +1,28 @@
+{
+  "availability": [
+    {
+      "payload_available": "online",
+      "payload_not_available": "offline",
+      "topic": "z2m_guard/availability"
+    }
+  ],
+  "default_entity_id": "sensor.z2m_guard_state",
+  "device": {
+    "identifiers": [
+      "z2m_guard"
+    ],
+    "manufacturer": "z2m-guard",
+    "model": "restart watchdog",
+    "name": "Z2M Guard",
+    "sw_version": "0.1.0"
+  },
+  "icon": "mdi:state-machine",
+  "name": "State",
+  "origin": {
+    "name": "z2m-guard",
+    "support_url": "https://github.com/St0pfen/z2m-guard",
+    "sw_version": "0.1.0"
+  },
+  "state_topic": "z2m_guard/state",
+  "unique_id": "z2m_guard_state"
+}

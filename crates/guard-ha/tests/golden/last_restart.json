@@ -1,0 +1,34 @@
+{
+  "availability": [
+    {
+      "payload_available": "online",
+      "payload_not_available": "offline",
+      "topic": "z2m_guard/availability"
+    }
+  ],
+  "default_entity_id": "sensor.z2m_guard_last_restart",
+  "device": {
+    "identifiers": [
+      "z2m_guard"
+    ],
+    "manufacturer": "z2m-guard",
+    "model": "restart watchdog",
+    "name": "Z2M Guard",
+    "sw_version": "0.1.0"
+  },
+  "device_class": "duration",
+  "icon": "mdi:timer-sand",
+  "json_attributes_template": "{{ {'reason': value_json.reason} | tojson }}",
+  "json_attributes_topic": "z2m_guard/last_restart",
+  "name": "Last suppressed downtime",
+  "origin": {
+    "name": "z2m-guard",
+    "support_url": "https://github.com/St0pfen/z2m-guard",
+    "sw_version": "0.1.0"
+  },
+  "state_class": "measurement",
+  "state_topic": "z2m_guard/last_restart",
+  "unique_id": "z2m_guard_last_restart",
+  "unit_of_measurement": "s",
+  "value_template": "{{ (value_json.downtime_ms / 1000) | round(1) }}"
+}

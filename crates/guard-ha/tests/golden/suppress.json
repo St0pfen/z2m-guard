@@ -1,0 +1,30 @@
+{
+  "availability": [
+    {
+      "payload_available": "online",
+      "payload_not_available": "offline",
+      "topic": "z2m_guard/availability"
+    }
+  ],
+  "default_entity_id": "binary_sensor.z2m_guard_suppress",
+  "device": {
+    "identifiers": [
+      "z2m_guard"
+    ],
+    "manufacturer": "z2m-guard",
+    "model": "restart watchdog",
+    "name": "Z2M Guard",
+    "sw_version": "0.1.0"
+  },
+  "icon": "mdi:shield-sync",
+  "name": "Restart window",
+  "origin": {
+    "name": "z2m-guard",
+    "support_url": "https://github.com/St0pfen/z2m-guard",
+    "sw_version": "0.1.0"
+  },
+  "payload_off": "OFF",
+  "payload_on": "ON",
+  "state_topic": "z2m_guard/suppress",
+  "unique_id": "z2m_guard_suppress"
+}
