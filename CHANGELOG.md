@@ -53,6 +53,7 @@
 - Tests: 42 → **47**
 
 ### Verified on the reference host
+- multi-arch OCI archive: `index digest sha256:57b0bd05944f7f`, amd64 and arm64 binaries both report `z2m-guard 0.1.0` (arm64 under qemu)
 - planned recreate: one suppressed window, 8727 ms downtime, no escalation
 - unexplained `docker stop`: escalation after 15.5 s, suppression released
 - broker restart inside a planned window: 1048 ms of downtime attributed, no escalation
