@@ -1,11 +1,16 @@
 # Builder image for release artifacts: musl toolchain for a static binary.
 # Used by deploy/build-release.sh; not part of the runtime image.
+# The repo pins channel = "stable" in rust-toolchain.toml, so this image installs
+# that exact channel name. Otherwise rustup tries to auto-install it at build
+# time, which fails for a non-root caller with a read-only RUSTUP_HOME.
 FROM rust:1.100-slim
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends musl-tools \
  && rm -rf /var/lib/apt/lists/* \
- && rustup target add x86_64-unknown-linux-musl \
+ && rustup toolchain install stable --profile minimal --component clippy,rustfmt \
+ && rustup default stable \
+ && rustup target add --toolchain stable x86_64-unknown-linux-musl \
  && cargo install cargo-cyclonedx --locked
 
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true

@@ -31,8 +31,11 @@ docker run --rm \
   bash -euo pipefail -c "
     cargo build --release --target $TARGET -p z2m-guard
     cp target/$TARGET/release/z2m-guard dist/$BIN
-    cargo cyclonedx --format json --output-cdx --spec-version 1.5
-    mv crates/z2m-guard/z2m-guard.cdx.json dist/z2m-guard-${VERSION}.cdx.json
+    # cargo-cyclonedx has no --output-cdx flag in this version: it writes
+    # <package>.cdx.json next to the manifest.
+    cargo cyclonedx --manifest-path crates/z2m-guard/Cargo.toml \
+      --format json --spec-version 1.5
+    mv crates/z2m-guard/z2m-guard.cdx.json "dist/z2m-guard-${VERSION}.cdx.json"
   "
 
 cd dist
