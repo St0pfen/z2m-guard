@@ -1,0 +1,89 @@
+# Release pipeline for z2m-guard.
+#
+# NOTE: this file cannot live under .github/workflows/ yet — the OAuth token in
+# use has no `workflow` scope, and GitHub rejects pushes that create workflow
+# files (refusing to allow an OAuth App to create or update workflow ...).
+# Move it back with a token that has `repo` + `workflow`, or paste it in the web
+# UI. Until then it is a reviewed, tested specification, not a live job.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            cross: true
+          - target: aarch64-unknown-linux-musl
+            cross: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      # cross-rs runs the build in its own container: correct musl toolchain for
+      # both architectures without hand-installed cross compilers.
+      - name: Install cross
+        run: cargo install cross --locked
+      - name: Build (static musl)
+        run: cross build --release --target ${{ matrix.target }} -p z2m-guard
+      - name: Package
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          BIN="z2m-guard-${VERSION}-${{ matrix.target }}"
+          cp "target/${{ matrix.target }}/release/z2m-guard" "$BIN"
+          sha256sum "$BIN" > "$BIN.sha256"
+          echo "BIN=$BIN" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.target }}
+          path: |
+            ${{ env.BIN }}
+            ${{ env.BIN }}.sha256
+
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: CycloneDX SBOM
+        run: |
+          cargo install cargo-cyclonedx --locked
+          cargo cyclonedx --format json --output-cdx --spec-version 1.5
+          mv crates/z2m-guard/z2m-guard.cdx.json "z2m-guard-${GITHUB_REF_NAME#v}.cdx.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: z2m-guard-*.cdx.json
+
+  release:
+    needs: [build, sbom]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: artifacts/*

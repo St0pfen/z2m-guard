@@ -24,6 +24,9 @@ pub enum Command {
         window_ms: u64,
     },
     /// Optional Docker attribution (host mode, events piped on stdin).
+    /// Only constructed by the `stdin-events` feature — part of the contract
+    /// either way, so it stays visible in the default build.
+    #[allow(dead_code)]
     ContainerDie {
         exit_code: i32,
     },

@@ -84,13 +84,24 @@ That posts an intent, then runs `docker compose up -d --force-recreate` for Z2M.
   Mosquitto user + ACL is a hardening step that needs a coordinated broker
   restart, so it is scheduled separately.
 
+## Build & release
+
+```bash
+cargo build --release                 # needs a C toolchain (rustls/ring)
+./deploy/build-release.sh             # static musl binary + SHA256SUMS + CycloneDX SBOM
+docker buildx build --platform linux/amd64,linux/arm64 -t z2m-guard:0.1.0 .
+```
+
+Full checklist: `docs/RELEASE.md`. Internals and the decisions behind them:
+`docs/ARCHITECTURE.md`. Security model: `SECURITY.md`.
+
 ## Status / roadmap
 
 - [x] M0 — workspace, licences, CI
 - [x] M1 — core state machine (pure, 20 tests incl. 3 properties)
 - [x] M2 — MQTT + Home Assistant discovery
 - [x] M3 — attribution (pre-restart signal, docker events parser) + deployment
-- [ ] M4 — release artifacts, docs, announcement
+- [x] M4 — static musl artifacts, SBOM, multi-arch image, docs, release pipeline
 - [ ] M5 — optional proxy mode
 
 ## Licence

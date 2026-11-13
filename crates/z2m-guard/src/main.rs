@@ -25,6 +25,7 @@ use crate::metrics::Metrics;
 #[derive(Debug, Parser)]
 #[command(
     name = "z2m-guard",
+    version,
     about = "Separates planned Zigbee2MQTT restarts from real outages"
 )]
 struct Cli {

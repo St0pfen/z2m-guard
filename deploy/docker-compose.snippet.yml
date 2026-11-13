@@ -34,6 +34,11 @@ services:
           - z2m-guard
 
 networks:
+  # Existing network of the Home Assistant stack; the guard gets a fixed
+  # address so Zigbee2MQTT's broker stays reachable by name.
+  hass_net:
+    external: true
+    name: hass_net
   monitoring:
     external: true
     name: monitoring_default

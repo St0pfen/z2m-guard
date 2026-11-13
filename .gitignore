@@ -7,3 +7,6 @@ config/local.toml
 config/verify.toml
 *.log
 # CI file lives here until a token with the `workflow` scope is available
+
+# release artifacts
+dist/

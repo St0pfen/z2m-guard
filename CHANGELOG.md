@@ -15,6 +15,11 @@
   optional stdin source (`--features stdin-events`).
 - Deploy artifacts: Dockerfile (distroless), compose snippet, pre-restart script,
   HA package example, Prometheus scrape snippet, Grafana dashboard.
+- Release tooling: static musl build via `deploy/build-release.sh` (runs unprivileged
+  in a builder image), CycloneDX 1.5 SBOM, multi-arch image (`linux/amd64`,
+  `linux/arm64`), tag-triggered release workflow with `SHA256SUMS`.
+- Docs: `docs/ARCHITECTURE.md` (decisions), `docs/RELEASE.md` (checklist),
+  `SECURITY.md` (threat model), `docs/ANNOUNCEMENT.md` (draft).
 
 ### Verified on the reference host
 - planned recreate: one suppressed window, 8727 ms downtime, no escalation
