@@ -122,6 +122,22 @@ into a GPL distribution.
 
 Contributions are accepted under the same dual licence (Apache-2.0 §5); no CLA.
 
+## Wiki
+
+Wiki sources live in `wiki/` (`Home.md`, `_Sidebar.md`, `_Footer.md`); the
+installation page is generated from `docs/INSTALL.md` at publish time, so it cannot
+drift from the reviewed file. Publish with:
+
+```bash
+./scripts/publish-wiki.sh
+```
+
+The script is honest about the one hard blocker: GitHub does not offer wikis on
+**private** repositories unless the account has Pro/Team/Enterprise. On a private
+repo the API accepts `{"has_wiki": true}` with HTTP 200 and silently keeps the flag
+false, and `<repo>.wiki.git` does not exist — the script checks both and exits with
+that reason instead of failing on a confusing clone error.
+
 ## CI note
 
 The workflow lives in `deploy/ci/github-actions-ci.yml`. It moves to

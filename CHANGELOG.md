@@ -20,6 +20,9 @@
   `linux/arm64`), tag-triggered release workflow with `SHA256SUMS`.
 - Docs: `docs/ARCHITECTURE.md` (decisions), `docs/RELEASE.md` (checklist),
   `SECURITY.md` (threat model), `docs/ANNOUNCEMENT.md` (draft).
+- Docs: `docs/INSTALL.md` — full installation guide (compose, systemd, HA app,
+  entities, ACL, monitoring, troubleshooting) plus `wiki/` sources and
+  `scripts/publish-wiki.sh`.
 
 ### Licensing
 - dual `MIT OR Apache-2.0` with both texts in the repo; README states the choice,

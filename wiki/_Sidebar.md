@@ -1,0 +1,13 @@
+- [Home](Home)
+- **Installation**
+  - [Full guide](Installation)
+  - [Variant A — Docker Compose](Installation#variant-a--docker-compose-recommended)
+  - [Variant B — systemd](Installation#variant-b--static-binary--systemd)
+  - [Variant C — Home Assistant App](Installation#variant-c--home-assistant-app-haos--supervised-only)
+  - [Why not HACS](Installation#why-not-hacs--the-marketplace)
+  - [Troubleshooting](Installation#troubleshooting)
+- **Project**
+  - [Architecture](https://github.com/St0pfen/z2m-guard/blob/main/docs/ARCHITECTURE.md)
+  - [Security](https://github.com/St0pfen/z2m-guard/blob/main/SECURITY.md)
+  - [Release](https://github.com/St0pfen/z2m-guard/blob/main/docs/RELEASE.md)
+  - [Changelog](https://github.com/St0pfen/z2m-guard/blob/main/CHANGELOG.md)
