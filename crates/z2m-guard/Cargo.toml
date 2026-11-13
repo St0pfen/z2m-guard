@@ -30,7 +30,7 @@ guard-docker = { path = "../guard-docker" }
 guard-proxy = { path = "../guard-proxy" }
 
 anyhow = "1"
-axum = "0.7"
+axum = "0.8"
 clap = { version = "4", features = ["derive"] }
 rumqttc = "0.25"
 serde = { version = "1", features = ["derive"] }
