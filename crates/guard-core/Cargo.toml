@@ -14,3 +14,4 @@ workspace = true
 [dependencies]
 
 [dev-dependencies]
+proptest = "1"
