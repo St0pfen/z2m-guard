@@ -51,3 +51,9 @@ an optional MQTT proxy that also collapses discovery republish storms.
 ## Licence
 
 MIT OR Apache-2.0, at your option.
+
+## CI note
+
+The workflow lives in `deploy/ci/github-actions-ci.yml`. It moves to
+`.github/workflows/ci.yml` as soon as a token with the `workflow` scope is
+available — the current one cannot create workflow files.
