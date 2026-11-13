@@ -33,6 +33,25 @@
 - release artifacts carry `LICENSE-MIT`, `LICENSE-APACHE` and the notices file,
   all covered by `SHA256SUMS` — binary redistribution keeps the attribution terms
 
+### Repository & hardening
+- `.github/`: issue templates (bug report with the three fields that answer most
+  questions, feature request, config with a private-security link), PR template,
+  Dependabot (cargo weekly in one grouped PR; actions and docker monthly)
+- `.gitattributes`: LF normalisation for shell scripts and marked generated files
+- `[profile.release]`: `strip = "symbols"`, thin LTO, one codegen unit —
+  musl artifact **6,354,320 → 4,233,856 B** (33 %), `file` now reports "stripped"
+- HTTP: 4 KiB body limit and a 5 s timeout. A malformed body used to return 202
+  with a default 120 s window, because `Option<Json<_>>` turns extractor
+  rejections into `None`; it is now parsed explicitly → 400, oversized → 413.
+  Five router tests cover 202/400/401/413/503.
+- The image no longer compiles `stdin-events`: a container cannot be fed a live
+  `docker events` stream, so the feature advertised a capability nothing could
+  use. `--docker-events-stdin` now fails before binding the HTTP port (it used to
+  report "Address already in use"); host/systemd wiring is documented.
+- MSRV corrected: `rust-version` says 1.85, verified (1.75 fails on
+  `edition2024` dependencies, 1.85 and 1.88 build the locked tree)
+- Tests: 42 → **47**
+
 ### Verified on the reference host
 - planned recreate: one suppressed window, 8727 ms downtime, no escalation
 - unexplained `docker stop`: escalation after 15.5 s, suppression released

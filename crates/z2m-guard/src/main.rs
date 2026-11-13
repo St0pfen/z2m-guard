@@ -54,6 +54,14 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
+    // Checked before anything binds: failing after the listener is up produced
+    // "Address already in use" when a second instance was started, which hid the
+    // actual reason.
+    #[cfg(not(feature = "stdin-events"))]
+    if cli.docker_events_stdin {
+        anyhow::bail!("--docker-events-stdin requires a build with --features stdin-events");
+    }
+
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),

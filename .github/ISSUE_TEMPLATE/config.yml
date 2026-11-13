@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security issue
+    url: https://github.com/St0pfen/z2m-guard/security/advisories/new
+    about: Please report vulnerabilities privately, not as a public issue.
+  - name: Installation guide
+    url: https://github.com/St0pfen/z2m-guard/blob/main/docs/INSTALL.md
+    about: Compose, systemd, Home Assistant entities, ACL, troubleshooting.

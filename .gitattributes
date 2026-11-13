@@ -1,0 +1,22 @@
+# Normalise line endings: the repo is developed on Linux but opened from Windows
+# editors and GitHub's web UI too. A CRLF in a shell script breaks the deploy
+# script on the target host, which is the kind of failure nobody debugs twice.
+* text=auto eol=lf
+
+*.rs      text diff=rust
+*.toml    text
+*.md      text
+*.yml     text
+*.yaml    text
+*.sh      text eol=lf
+Dockerfile text
+
+# Generated, huge, or not meant for review diffs.
+Cargo.lock        text linguist-generated=true
+THIRD-PARTY.md    text linguist-generated=true
+*.cdx.json        text linguist-generated=true
+dist/*            binary
+*.oci.tar         binary
+*.png             binary
+*.jpg             binary
+*.svg             text

@@ -330,6 +330,33 @@ If the host has no `docker` binary, attribution relies purely on the restart-int
 endpoint. That is the normal case and works fine; the Docker event path is only a
 convenience for `docker compose up -d` done by hand.
 
+### Docker event attribution (host mode only)
+
+The `stdin-events` build feature parses `docker events` JSON and turns a container
+exit into an attribution. It only makes sense where the guard can actually be fed
+that stream — the systemd variant on the Docker host. The container image is
+therefore built **without** it, and `--docker-events-stdin` fails loudly if the
+flag is passed to a binary that lacks the feature.
+
+Build it for the host variant:
+
+```bash
+cargo build --release --features stdin-events -p z2m-guard
+```
+
+and wrap the process so the event stream is its stdin:
+
+```ini
+ExecStart=/bin/bash -c 'exec docker events \
+  --filter container=zigbee2mqtt \
+  --format "{{json .}}" | exec /usr/local/bin/z2m-guard \
+  --config /etc/z2m-guard/config.toml --docker-events-stdin'
+```
+
+`docker events` keeps running as long as the pipe is open; if it exits, systemd
+restarts the unit. Without this wiring the guard still works — planned restarts are
+then attributed solely by the intent endpoint.
+
 ## Variant C — Home Assistant App (HAOS / Supervised only)
 
 Container-based Home Assistant (the setup in this repo's reference host) has **no**

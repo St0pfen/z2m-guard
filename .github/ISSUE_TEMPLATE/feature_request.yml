@@ -1,0 +1,38 @@
+name: Feature request
+description: Propose a behaviour, an integration or a deployment target
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep in mind what the guard is: it observes, it never restarts anything,
+        and it only writes to `z2m_guard/#` and its own discovery configs.
+        Anything that would sit in the Zigbee data path is a different tool.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Which problem does this solve?
+      description: Describe the situation, ideally with numbers — how long, how often, what did it cost.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What should happen?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What do you do today instead?
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - attribution (planned vs. real outage)
+        - Home Assistant entities / discovery
+        - deployment (compose, systemd, HA app)
+        - metrics / alerts
+        - proxy mode (M5)
+        - documentation

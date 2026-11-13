@@ -15,3 +15,18 @@ unsafe_code = "forbid"
 
 [workspace.lints.clippy]
 unwrap_used = "warn"
+
+[workspace.lints.cargo]
+# guard-proxy is a declared, feature-gated dependency with no call sites yet: the
+# binary only links it once M5 implements proxy mode. Cargo's unused_dependencies
+# lint is right about the fact and wrong about the intent.
+unused_dependencies = "allow"
+
+[profile.release]
+# Measured on the musl artifact: 6,354,320 B unstripped -> 4,233,856 B with these
+# settings (33 % smaller, and `file` reports "stripped"). Thin LTO keeps the build
+# under two minutes; codegen-units=1 trades a few seconds for better inlining,
+# which matters on the arm64 emulated leg.
+strip = "symbols"
+lto = "thin"
+codegen-units = 1

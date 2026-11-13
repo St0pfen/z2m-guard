@@ -108,6 +108,17 @@ Full checklist: `docs/RELEASE.md`. Internals and the decisions behind them:
 - [x] M4 — static musl artifacts, SBOM, multi-arch image, docs, release pipeline
 - [ ] M5 — optional proxy mode
 
+## Contributing
+
+Issues use templates (bug reports ask for version, Z2M version and MQTT protocol —
+those three answer most questions). Pull requests are expected to state what they
+actually ran: `cargo fmt --check`, `clippy -D warnings`, `cargo test --workspace
+--all-features`, and for I/O changes a run against a real broker.
+
+Rules that are not negotiable: the guard writes only to `z2m_guard/#` and its own
+discovery configs, never to `zigbee2mqtt/#`; it never gets the Docker socket; and
+every suppression window stays deadline-bound.
+
 ## Licence
 
 Dual-licensed under **MIT OR Apache-2.0**, at your option — the Rust ecosystem

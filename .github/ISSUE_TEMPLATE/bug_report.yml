@@ -1,0 +1,57 @@
+name: Bug report
+description: Something behaves differently than documented
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: `docker logs z2m-guard`, the `/healthz` and `/metrics`
+        endpoints, and the three retained discovery topics usually answer the
+        question faster than a round trip.
+  - type: input
+    id: version
+    attributes:
+      label: z2m-guard version
+      description: Output of `z2m-guard --version`, or the image tag.
+      placeholder: z2m-guard 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: ha
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.10.4"
+  - type: input
+    id: z2m
+    attributes:
+      label: Zigbee2MQTT version and MQTT protocol
+      placeholder: "2.14.3, MQTT v5"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead?
+      description: Paste log lines and the relevant metric values, redacted of credentials.
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant configuration
+      description: The `[guard]` and `[homeassistant]` sections of config.toml. Never paste passwords or tokens.
+      render: toml
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I removed passwords, tokens and connection strings from everything pasted above.
+          required: true
+        - label: I looked at the troubleshooting table in docs/INSTALL.md.

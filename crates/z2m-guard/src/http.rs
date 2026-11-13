@@ -5,14 +5,17 @@
 //! a forged signal would silence real alarms.
 
 use std::sync::Arc;
+use std::time::Duration;
 
-use axum::extract::State;
+use axum::body::Bytes;
+use axum::extract::{DefaultBodyLimit, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
-use axum::{Json, Router};
+use axum::Router;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
+use tower_http::timeout::TimeoutLayer;
 
 use crate::metrics::Metrics;
 
@@ -59,7 +62,12 @@ pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/healthz", get(healthz))
         .route("/metrics", get(metrics))
+        // The only endpoint with a body, and its body is a few bytes of JSON.
+        // Anything larger is a mistake or an attack; 408 on a hung request keeps
+        // a stalled client from pinning a task forever.
         .route("/v1/restart-intent", post(restart_intent))
+        .layer(DefaultBodyLimit::max(4096))
+        .layer(TimeoutLayer::new(Duration::from_secs(5)))
         .with_state(state)
 }
 
@@ -78,7 +86,7 @@ async fn metrics(State(state): State<AppState>) -> impl IntoResponse {
 async fn restart_intent(
     State(state): State<AppState>,
     headers: HeaderMap,
-    body: Option<Json<IntentBody>>,
+    body: Bytes,
 ) -> impl IntoResponse {
     let Some(expected) = state.token.as_deref() else {
         return (
@@ -99,7 +107,19 @@ async fn restart_intent(
         );
     }
 
-    let body = body.map(|Json(b)| b).unwrap_or_default();
+    // Parsed by hand instead of via `Option<Json<_>>`: an optional extractor turns a
+    // rejection (malformed JSON, oversized body) into `None`, so a caller would get
+    // 202 while the window silently fell back to the default. Empty body keeps
+    // meaning "defaults"; anything else must be valid JSON or it is a 400.
+    let body = if body.is_empty() {
+        IntentBody::default()
+    } else {
+        match serde_json::from_slice::<IntentBody>(&body) {
+            Ok(b) => b,
+            Err(e) => return (StatusCode::BAD_REQUEST, format!("invalid JSON body: {e}\n")),
+        }
+    };
+
     let window_s = body.window_s.unwrap_or(120).clamp(1, 3600);
     let reason = body.reason.unwrap_or_else(|| "manual".to_string());
 
@@ -143,6 +163,9 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::body::Body;
+    use axum::http::Request;
+    use tower::ServiceExt;
 
     #[test]
     fn constant_time_eq_matches_expected_semantics() {
@@ -150,5 +173,68 @@ mod tests {
         assert!(!constant_time_eq(b"abc", b"abd"));
         assert!(!constant_time_eq(b"abc", b"ab"));
         assert!(constant_time_eq(b"", b""));
+    }
+
+    fn app_token(token: Option<&str>) -> (Router, mpsc::Receiver<Command>) {
+        let (tx, rx) = mpsc::channel(8);
+        let state = AppState {
+            metrics: Arc::new(Metrics::new()),
+            tx,
+            token: token.map(str::to_string),
+        };
+        (router(state), rx)
+    }
+
+    async fn post_intent(app: Router, token: &str, body: Body) -> StatusCode {
+        let req = Request::post("/v1/restart-intent")
+            .header("x-guard-token", token)
+            .header("content-type", "application/json")
+            .body(body)
+            .expect("request");
+        app.oneshot(req).await.expect("response").status()
+    }
+
+    #[tokio::test]
+    async fn empty_body_opens_the_default_window() {
+        let (app, mut rx) = app_token(Some("t"));
+        let status = post_intent(app, "t", Body::empty()).await;
+        assert_eq!(status, StatusCode::ACCEPTED);
+        match rx.try_recv() {
+            Ok(Command::PriorSignal { window_ms, .. }) => assert_eq!(window_ms, 120_000),
+            other => panic!("expected PriorSignal, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn malformed_json_is_a_client_error_not_a_silent_default() {
+        let (app, mut rx) = app_token(Some("t"));
+        let status = post_intent(app, "t", Body::from("{not json")).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(rx.try_recv().is_err(), "no window may open on a bad body");
+    }
+
+    #[tokio::test]
+    async fn oversized_body_is_rejected_by_the_limit() {
+        let (app, mut rx) = app_token(Some("t"));
+        let big = Body::from("a".repeat(8192));
+        let status = post_intent(app, "t", big).await;
+        assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
+        assert!(rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn wrong_token_is_unauthorized() {
+        let (app, mut rx) = app_token(Some("t"));
+        let status = post_intent(app, "wrong", Body::empty()).await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+        assert!(rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn missing_token_configuration_refuses_every_intent() {
+        let (app, mut rx) = app_token(None);
+        let status = post_intent(app, "anything", Body::empty()).await;
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert!(rx.try_recv().is_err());
     }
 }
