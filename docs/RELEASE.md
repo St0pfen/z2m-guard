@@ -31,6 +31,15 @@ Produces in `dist/`:
 - `SHA256SUMS`
 - `z2m-guard-<version>.cdx.json` — CycloneDX 1.5 SBOM from the real lockfile
 
+The script runs the build as the calling user inside `z2m-guard-artifacts:local`,
+so nothing in `dist/` ends up root-owned. Two traps it already handles:
+
+- the builder image must install the toolchain under the same channel name as
+  `rust-toolchain.toml` (`stable`), otherwise rustup tries to auto-install it
+  during the build and fails on a read-only `RUSTUP_HOME`;
+- this `cargo-cyclonedx` has no `--output-cdx` flag — it writes
+  `<package>.cdx.json` next to the manifest, which the script moves to `dist/`.
+
 Verify: `file dist/z2m-guard-*` says "statically linked", and the binary runs on a
 musl host/container (`docker run --rm -v $PWD/dist:/d alpine /d/z2m-guard-... --version`).
 
@@ -42,7 +51,18 @@ docker buildx build --platform linux/amd64,linux/arm64 -t z2m-guard:<version> --
 ```
 
 The multi-arch build is the only proof the arm64 path compiles; run it before
-tagging.
+tagging. Prerequisites on a plain Docker host:
+
+```bash
+docker run --privileged --rm tonistiigi/binfmt --install arm64   # qemu user emulation
+docker buildx create --name z2m-multi --driver docker-container --use
+docker buildx inspect --bootstrap
+```
+
+The default `docker` driver cannot build foreign platforms, and without the
+binfmt entry the arm64 leg dies with "exec format error". Expect ~15 minutes for
+arm64 under emulation on a cold cache — the Dockerfile's cache mounts exist for
+exactly that reason.
 
 ## 5. Tag (local, private repo)
 

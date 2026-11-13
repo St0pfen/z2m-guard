@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 — unreleased
+## 0.1.0 — 2026-11-13
 
 ### Added
 - Core state machine (`guard-core`): planned vs. suspect vs. confirmed outage,
@@ -24,6 +24,11 @@
 ### Verified on the reference host
 - planned recreate: one suppressed window, 8727 ms downtime, no escalation
 - unexplained `docker stop`: escalation after 15.5 s, suppression released
+- release artifacts: `static-pie linked` musl binary runs on alpine (`--version`,
+  `--print-discovery` produce output), `SHA256SUMS` verifies, CycloneDX 1.5 SBOM
+  with 118 components
+- multi-arch image: `linux/amd64` and `linux/arm64` manifests present in the OCI
+  archive; the arm64 layer carries an aarch64 ELF that executes under emulation
 
 ### Not done
 - Direct Docker socket access (deliberate: root-equivalent privilege)
