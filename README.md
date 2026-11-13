@@ -3,7 +3,8 @@
 Tells a **planned** Zigbee2MQTT restart apart from a **real** Zigbee outage — and
 publishes that verdict where your alarm chain can read it.
 
-> Status: M3 — running in production on a Docker-based Home Assistant stack.
+> Status: M4 — running in production on a Docker-based Home Assistant stack; static
+> musl artifacts, SBOM and a multi-arch image ship with every tag.
 
 ## The problem
 
