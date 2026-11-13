@@ -18,6 +18,8 @@ path = "src/main.rs"
 [features]
 default = []
 docker = ["guard-docker/docker-socket"]
+# Host mode: parse `docker events --format '{{json .}}'` piped on stdin.
+stdin-events = ["guard-docker/stdin"]
 proxy = ["guard-proxy/proxy"]
 
 [dependencies]

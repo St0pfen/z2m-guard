@@ -23,6 +23,10 @@ pub enum Command {
         reason: String,
         window_ms: u64,
     },
+    /// Optional Docker attribution (host mode, events piped on stdin).
+    ContainerDie {
+        exit_code: i32,
+    },
     /// Internal: stop the runtime cleanly (SIGINT).
     Shutdown,
 }

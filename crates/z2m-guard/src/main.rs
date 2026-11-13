@@ -35,6 +35,11 @@ struct Cli {
     /// Print the Home Assistant discovery payloads and exit (no broker needed).
     #[arg(long)]
     print_discovery: bool,
+
+    /// Read `docker events --format '{{json .}}'` from stdin for attribution
+    /// (build with --features stdin-events).
+    #[arg(long)]
+    docker_events_stdin: bool,
 }
 
 #[tokio::main]
@@ -80,11 +85,33 @@ async fn main() -> Result<()> {
         }
     });
 
+    let shutdown_tx = tx.clone();
     tokio::spawn(async move {
         if tokio::signal::ctrl_c().await.is_ok() {
-            let _ = tx.send(Command::Shutdown).await;
+            let _ = shutdown_tx.send(Command::Shutdown).await;
         }
     });
+
+    #[cfg(feature = "stdin-events")]
+    if cli.docker_events_stdin {
+        let events_tx = tx.clone();
+        tokio::spawn(async move {
+            let stdin = tokio::io::stdin();
+            guard_docker::read_events(tokio::io::BufReader::new(stdin), |event| {
+                if let guard_docker::ContainerEvent::Die { exit_code, .. } = event {
+                    let tx = events_tx.clone();
+                    tokio::spawn(async move {
+                        let _ = tx.send(Command::ContainerDie { exit_code }).await;
+                    });
+                }
+            })
+            .await;
+        });
+    }
+    #[cfg(not(feature = "stdin-events"))]
+    if cli.docker_events_stdin {
+        anyhow::bail!("--docker-events-stdin requires a build with --features stdin-events");
+    }
 
     runtime::run(cfg, metrics, rx).await?;
     server.abort();

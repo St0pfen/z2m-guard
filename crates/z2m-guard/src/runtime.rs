@@ -81,7 +81,10 @@ pub async fn run(
                                     let now = now_ms(&start);
                                     metrics.set_bridge_online(online, now);
                                     let input = if online { Input::BridgeOnline } else { Input::BridgeOffline };
-                                    if flap.observe(now) {
+                                    // Attributed restarts are already reported as
+                                    // restart_suppressed; counting them as flaps too
+                                    // would double-report every deployment.
+                                    if !guard.is_attributed() && flap.observe(now) {
                                         metrics.record_flap();
                                         log_event(json!({"kind": "flap", "ts_ms": now}));
                                     }
@@ -108,6 +111,12 @@ pub async fn run(
                                 Input::PriorSignal { reason: Reason::PriorSignal, window_ms },
                                 now,
                             );
+                            publish_outputs(&client, &mut guard, &metrics, &cfg, out, now).await;
+                        }
+                        Some(Command::ContainerDie { exit_code }) => {
+                            info!(exit_code, "container die event");
+                            let now = now_ms(&start);
+                            let out = guard.step(Input::ContainerDie { exit_code }, now);
                             publish_outputs(&client, &mut guard, &metrics, &cfg, out, now).await;
                         }
                         Some(Command::Shutdown) => {
