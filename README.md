@@ -3,13 +3,13 @@
 Tells a **planned** Zigbee2MQTT restart apart from a **real** Zigbee outage — and
 publishes that verdict where your alarm chain can read it.
 
-> Status: M0 (skeleton). No functionality yet.
+> Status: M3 — running in production on a Docker-based Home Assistant stack.
 
 ## The problem
 
 Every `docker compose up -d` recreates the Zigbee2MQTT container. For ~9 seconds
-every Zigbee entity goes `unavailable`, because all of them share one availability
-topic:
+(measured: 8.7 s) every Zigbee entity goes `unavailable`, because all of them share
+one availability topic:
 
 ```json
 "availability": [{ "topic": "zigbee2mqtt/bridge/state",
@@ -18,33 +18,78 @@ topic:
 
 Any alarm rule, automation or bridge that watches those entities fires — for a
 routine container update. Worse, Z2M republishes its whole discovery tree on
-startup, which on this host produced **179 messages / 4.49M tokens** in a single
-weekly run.
+startup, which on the reference host produced **179 messages / 4.49M tokens** in a
+single weekly run.
 
 ## The idea
 
-A small daemon subscribes to `zigbee2mqtt/bridge/state`, correlates the flap with
-container events or a pre-restart signal, and publishes:
+A small daemon subscribes to `zigbee2mqtt/bridge/state`, correlates the flap with a
+pre-restart signal or container events, and publishes:
 
-- `binary_sensor.z2m_guard_suppress` — `on` while the outage is attributable
+- `binary_sensor.z2m_guard_suppress` — `on` while the window is attributed
 - `sensor.z2m_guard_state` — `idle | suspect | planned | settling | outage_confirmed`
+- `sensor.z2m_guard_last_restart` — duration of the last suppressed downtime
 - Prometheus metrics (`z2m_guard_suppressed_events_total{reason}` …)
-- JSON-Lines events on stdout / webhook
+- JSON-Lines events on stdout
 
-**Safety property:** suppression requires attribution. An outage nobody asked for
-escalates after a 15 s grace window instead of being swallowed.
+## How it decides
 
-## Scope
+| Situation | Verdict |
+|---|---|
+| pre-restart signal, then bridge goes away | **planned**, suppressed |
+| container exit code 0 within 30 s of the flap | **planned**, suppressed |
+| container exit code ≠ 0 or no attribution | **suspect** → 15 s grace |
+| still gone after grace | **outage_confirmed**, suppression OFF, alarm passes |
+| bridge back | **settling** for 20 s, then idle |
 
-V1 is an observer — no changes to Zigbee2MQTT's data path. V2 (feature-gated) adds
-an optional MQTT proxy that also collapses discovery republish storms.
+**Safety property:** suppression is never unbounded. Every suppression is attached
+to a deadline, and an outage nobody asked for escalates after 15 s instead of being
+swallowed. Proven by property tests over random input sequences.
+
+## Deploy
+
+```bash
+docker build -t z2m-guard:local .
+# service definition: deploy/docker-compose.snippet.yml
+# config:             config/example.toml
+# HA package:         deploy/homeassistant/z2m_guard.yaml
+# Prometheus:         deploy/prometheus/scrape-snippet.yml
+```
+
+Announce a planned restart so it is attributed:
+
+```bash
+Z2M_GUARD_HTTP_TOKEN=… ./deploy/restart-z2m.sh 180
+```
+
+That posts an intent, then runs `docker compose up -d --force-recreate` for Z2M.
+
+## Measured on the reference host
+
+- planned recreate → `suppressed_events_total{reason="prior_signal"} = 1`,
+  `outage_confirmed_total = 0`, downtime 8727 ms
+- unexplained `docker stop` → `outage_confirmed_total = 1` after 15.5 s,
+  suppression released, alarm passes
+
+## Limitations
+
+- Docker attribution needs either the pre-restart script (recommended, no
+  privileges) or events piped on stdin (`--features stdin-events`). Reading the
+  Docker socket directly is deliberately not implemented in v0.1: it is
+  root-equivalent host access.
+- The guard observes; it does not restart anything.
+- Discovery republish storms are not reduced in v1 — that is the optional proxy
+  mode (M5).
+- Runs against the broker with the existing service credentials. A dedicated
+  Mosquitto user + ACL is a hardening step that needs a coordinated broker
+  restart, so it is scheduled separately.
 
 ## Status / roadmap
 
 - [x] M0 — workspace, licences, CI
 - [x] M1 — core state machine (pure, 20 tests incl. 3 properties)
 - [x] M2 — MQTT + Home Assistant discovery
-- [ ] M3 — attribution (Docker events / pre-restart signal) + deployment
+- [x] M3 — attribution (pre-restart signal, docker events parser) + deployment
 - [ ] M4 — release artifacts, docs, announcement
 - [ ] M5 — optional proxy mode
 
