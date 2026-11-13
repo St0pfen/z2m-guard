@@ -1,0 +1,28 @@
+[package]
+name = "z2m-guard"
+description = "Separates planned Zigbee2MQTT restarts from real outages"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "z2m-guard"
+path = "src/main.rs"
+
+[features]
+default = []
+docker = ["guard-docker/docker-socket"]
+proxy = ["guard-proxy/proxy"]
+
+[dependencies]
+guard-core = { path = "../guard-core" }
+guard-ha = { path = "../guard-ha" }
+guard-mqtt = { path = "../guard-mqtt" }
+guard-docker = { path = "../guard-docker" }
+guard-proxy = { path = "../guard-proxy" }

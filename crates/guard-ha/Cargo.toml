@@ -1,0 +1,15 @@
+[package]
+name = "guard-ha"
+description = "Home Assistant MQTT discovery payloads for z2m-guard"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+guard-core = { path = "../guard-core" }

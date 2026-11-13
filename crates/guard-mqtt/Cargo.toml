@@ -1,0 +1,15 @@
+[package]
+name = "guard-mqtt"
+description = "MQTT transport for z2m-guard: bridge state, publish, reconnect"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+guard-core = { path = "../guard-core" }

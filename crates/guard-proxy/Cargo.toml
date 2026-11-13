@@ -1,0 +1,19 @@
+[package]
+name = "guard-proxy"
+description = "Optional transparent MQTT proxy between Zigbee2MQTT and the broker"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# Not part of V1. Enabling makes the guard a hop in the Zigbee data path.
+proxy = []
+
+[dependencies]
+guard-core = { path = "../guard-core" }

@@ -1,0 +1,19 @@
+[package]
+name = "guard-docker"
+description = "Docker Engine event attribution for planned vs. crash restarts (opt-in)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# Off by default: the Docker socket is root-equivalent host access.
+docker-socket = []
+
+[dependencies]
+guard-core = { path = "../guard-core" }
