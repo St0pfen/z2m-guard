@@ -1,0 +1,5 @@
+{"Type":"container","Action":"create","Actor":{"ID":"0000fixture0000","Attributes":{"image":"alpine","name":"zigbee2mqtt"}},"scope":"local","time":1700000000,"timeNano":1700000000000000000}
+{"Type":"container","Action":"destroy","Actor":{"ID":"0000fixture0000","Attributes":{"image":"alpine","name":"zigbee2mqtt"}},"scope":"local","time":1700000000,"timeNano":1700000000000000000}
+{"Type":"container","Action":"die","Actor":{"ID":"0000fixture0000","Attributes":{"execDuration":"1","exitCode":"137","image":"alpine","name":"zigbee2mqtt"}},"scope":"local","time":1700000000,"timeNano":1700000000000000000}
+{"Type":"container","Action":"kill","Actor":{"ID":"0000fixture0000","Attributes":{"image":"alpine","name":"zigbee2mqtt","signal":"9"}},"scope":"local","time":1700000000,"timeNano":1700000000000000000}
+{"Type":"container","Action":"start","Actor":{"ID":"0000fixture0000","Attributes":{"image":"alpine","name":"zigbee2mqtt"}},"scope":"local","time":1700000000,"timeNano":1700000000000000000}
