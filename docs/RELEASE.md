@@ -115,10 +115,15 @@ git tag -a v<version> -m "z2m-guard <version>"
 git push origin v<version>
 ```
 
-The tag-triggered release job cannot run yet: the pipeline lives in
-`deploy/ci/release.yml` because the current token lacks the `workflow` scope. Once
-it is moved to `.github/workflows/release.yml`, a tag push builds both musl
-targets, the SBOM and a **draft** GitHub release with `SHA256SUMS` attached.
+Pushing the tag triggers `.github/workflows/release.yml`: it builds both musl
+targets, the SBOM and the licence notices, pushes `ghcr.io/st0pfen/z2m-guard`
+for `linux/amd64` + `linux/arm64`, and opens a **draft** release with every
+artifact attached. Local `dist/` output stays useful for the reference host —
+the pipeline is what publishes.
+
+Creating or editing files under `.github/workflows/` requires a token with the
+`workflow` scope. Without it the contents API answers 404 and `git push` is
+rejected with a misleading message; that is a scope problem, not a path problem.
 
 ## 6. After deploying
 

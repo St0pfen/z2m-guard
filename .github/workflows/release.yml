@@ -1,10 +1,5 @@
-# Release pipeline for z2m-guard.
-#
-# NOTE: this file cannot live under .github/workflows/ yet — the OAuth token in
-# use has no `workflow` scope, and GitHub rejects pushes that create workflow
-# files (refusing to allow an OAuth App to create or update workflow ...).
-# Move it back with a token that has `repo` + `workflow`, or paste it in the web
-# UI. Until then it is a reviewed, tested specification, not a live job.
+# Release pipeline for z2m-guard: tag -> musl binaries (amd64 + arm64), SBOM,
+# licence notices, multi-arch image on GHCR, draft release with all assets.
 name: release
 
 on:
@@ -13,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -83,8 +79,50 @@ jobs:
             dist/LICENSE-MIT
             dist/LICENSE-APACHE
 
+  # Without this job the README claim ("a multi-arch image ships with every tag")
+  # was only true for whoever built it by hand: the local buildx run produced an
+  # OCI archive and nothing published it anywhere.
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # GHCR requires a lowercase owner: the account is St0pfen, the image
+          # namespace must be st0pfen.
+          images: ghcr.io/st0pfen/z2m-guard
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - name: Build and push (amd64 + arm64)
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+      - name: Record the digest for the release notes
+        run: |
+          echo "### Image" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.meta.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.push.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
   release:
-    needs: [build, sbom]
+    needs: [build, sbom, image]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

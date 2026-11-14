@@ -29,6 +29,13 @@
   (`cargo +1.85.0 check --workspace --all-features --locked`).
 
 ### Repository
+- CI is live: `.github/workflows/ci.yml` runs fmt, clippy and the full suite on
+  every push/PR and builds the locked tree on the declared MSRV 1.85, so
+  `rust-version` is enforced instead of asserted.
+- `.github/workflows/release.yml` gained the missing image job — until now the
+  README claim "a multi-arch image ships with every tag" was only true for a
+  hand-run `buildx` on one host; the tag pipeline now pushes
+  `ghcr.io/st0pfen/z2m-guard` for `linux/amd64` and `linux/arm64`.
 - `tests/golden/*.json` reblessed for `sw_version` 0.1.1; the diff is exactly six
   lines, all `"sw_version"` — no other field of the discovery contract moved.
 - per-crate `*.cdx.json` untracked and ignored: `cargo-cyclonedx` writes them next

@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: Test
+        run: cargo test --workspace --all-features
+
+  # rust-version in Cargo.toml is a promise, not a comment: CHANGELOG entries have
+  # claimed MSRV 1.85 before while nothing enforced it. This job builds the locked
+  # tree on exactly that toolchain (1.85 cannot run edition2024 dependencies, so a
+  # silent bump breaks here instead of in someone's distribution build).
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: msrv-1.85
+      - name: Build on the declared MSRV
+        run: cargo +1.85.0 check --workspace --all-features --locked

@@ -152,6 +152,12 @@ that reason instead of failing on a confusing clone error.
 
 ## CI note
 
-The workflow lives in `deploy/ci/github-actions-ci.yml`. It moves to
-`.github/workflows/ci.yml` as soon as a token with the `workflow` scope is
-available — the current one cannot create workflow files.
+Two workflows live in `.github/workflows/`: `ci.yml` (fmt + clippy + tests on
+every push and PR, plus a job that builds the locked tree on the declared MSRV
+1.85) and `release.yml` (tag push → musl binaries for amd64/arm64, CycloneDX
+SBOM, licence notices, multi-arch image pushed to GHCR, draft release with every
+asset attached).
+
+Creating those files needs a token with the `workflow` scope. An OAuth token
+without it gets a bare HTTP 404 from the contents API and a push rejection —
+GitHub hides the real reason, so don't read the 404 as "path wrong".

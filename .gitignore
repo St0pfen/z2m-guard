@@ -10,7 +10,6 @@ config/verify.toml
 # manifest and build-release.sh moves them into dist/. The SBOM of record is
 # dist/z2m-guard-<version>.cdx.json, not a stale copy committed inside the crate.
 crates/*/*.cdx.json
-# CI file lives here until a token with the `workflow` scope is available
 
 # release artifacts
 dist/
