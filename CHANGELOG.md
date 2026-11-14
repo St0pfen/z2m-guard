@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### M5 — proxy mode (not released, not validated)
+- `guard-proxy` is no longer a stub: a feature-gated MQTT relay that sits between
+  Zigbee2MQTT and the broker, preserves the client's protocol level and **will**,
+  enforces a topic allowlist (fail closed) and drops duplicate **retained** discovery
+  publishes inside a window, acknowledging QoS 1 itself so Z2M cannot retransmit them.
+- 18 unit and end-to-end tests against an in-process fake broker; two real defects
+  were found by them — a PUBACK written to the wrong socket (the client would block
+  forever) and an allowlist test that asserted the opposite of the intended coverage
+  semantics.
+- `[proxy]` config section, `--features proxy` build gate, and a startup refusal when
+  `proxy.enabled = true` meets a binary without the feature.
+- Deliberately **not** released: the plan requires an MQTT-version measurement, a
+  200 msg/s load test and a failover observation on a real stack first. See
+  `docs/PROXY.md` for the open list.
+
 ## 0.1.2 — 2026-11-14
 
 ### Security
