@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Fixed
+- **Suppression window never expired while the MQTT broker was unreachable**
+  (issue #5). The ticker and the HTTP command receiver lived inside the
+  per-connection `select!`, so every refused connection tore that loop down
+  before the tick branch could fire: `Guard::expire()` never ran and an intent
+  accepted during an outage suppressed indefinitely. Ticker and receiver now
+  live outside the connection loop and the reconnect pause serves both, so
+  windows expire on wall-clock time; publishes are skipped while disconnected
+  and republished by `publish_connected` after the reconnect. Regression test
+  `suppression_expires_while_the_broker_is_unreachable` runs the real runtime
+  against a closed port and was confirmed to fail on the previous code.
+
 ### Dependencies (four majors, each gated on the full suite — 48 tests afterwards)
 - `axum` 0.7.9 → 0.8.9 — drop-in: no dynamic path segments, every handler is a
   plain `async fn`; the router status matrix (202/400/401/408/413/503) passes.
