@@ -21,6 +21,21 @@
 ### Repository
 - golden discovery files reblessed for `sw_version` 0.1.2 (six lines, version only).
 
+### Verified on the reference host
+- binary `z2m-guard-0.1.2-x86_64-unknown-linux-musl`: **2,988,680 B** (0.1.1:
+  6,609,856 B — the TLS stack was the largest single block), static-pie, stripped,
+  sha256 `84f35aa5772e…9756`, downloaded from the published release, hash matched
+  against its `.sha256` sidecar, runs and prints `z2m-guard 0.1.2`.
+- published SBOM: **104 components** (0.1.1: 127), no `rustls*` entry, and an
+  osv.dev querybatch over all 104 `(name, version)` pairs returned **0 findings**
+  (0.1.1: 10).
+- image `ghcr.io/st0pfen/z2m-guard:0.1.2` (`:0.1`, `:latest`), index digest
+  `sha256:51cd4a08560a…c285`; the `0.1.1` tag still points at its own digest.
+- reference host: container recreated on 0.1.2, `/healthz` ok, 10 metric series,
+  MQTT connected, retained discovery reads `sw_version 0.1.2`.
+- CI run `43591084924` green on `test`, `audit`, `msrv`, `image`; tag run
+  `43591094537` produced all four jobs green and attached 8 assets.
+
 ## 0.1.1 — 2026-11-14
 
 ### Fixed
