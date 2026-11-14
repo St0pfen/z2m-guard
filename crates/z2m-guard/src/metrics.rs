@@ -59,6 +59,13 @@ impl Metrics {
         self.discovery_deduped.fetch_add(1, Ordering::Relaxed);
     }
 
+    /// Set from the proxy's own counter (the proxy owns the tally, `/metrics`
+    /// mirrors it once a second).
+    #[cfg_attr(not(feature = "proxy"), allow(dead_code))]
+    pub fn set_discovery_deduped(&self, total: u64) {
+        self.discovery_deduped.store(total, Ordering::Relaxed);
+    }
+
     pub fn set_window_active(&self, active: bool) {
         self.window_active.store(active, Ordering::Relaxed);
     }

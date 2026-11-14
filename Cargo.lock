@@ -411,6 +411,8 @@ name = "guard-proxy"
 version = "0.1.2"
 dependencies = [
  "guard-core",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
