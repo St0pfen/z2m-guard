@@ -63,6 +63,12 @@ impl Metrics {
         self.window_active.store(active, Ordering::Relaxed);
     }
 
+    /// Current suppression state — the runtime test asserts on this to prove a
+    /// window closes without a reachable broker.
+    pub fn window_active(&self) -> bool {
+        self.window_active.load(Ordering::Relaxed)
+    }
+
     pub fn set_bridge_online(&self, online: bool, now_ms: u64) {
         if online {
             self.bridge_online_since_ms.store(now_ms, Ordering::Relaxed);
@@ -76,7 +82,7 @@ impl Metrics {
         s.push_str("# TYPE z2m_guard_window_active gauge\n");
         s.push_str(&format!(
             "z2m_guard_window_active {}\n",
-            u8::from(self.window_active.load(Ordering::Relaxed))
+            u8::from(self.window_active())
         ));
 
         s.push_str("# HELP z2m_guard_suppressed_events_total Restart windows that were suppressed, by attribution.\n");
