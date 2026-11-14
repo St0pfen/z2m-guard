@@ -5,6 +5,9 @@ body:
   - type: markdown
     attributes:
       value: |
+        Write this report in English — issues and pull requests in this
+        repository are English only.
+
         Before filing: `docker logs z2m-guard`, the `/healthz` and `/metrics`
         endpoints, and the three retained discovery topics usually answer the
         question faster than a round trip.

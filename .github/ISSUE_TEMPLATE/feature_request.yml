@@ -5,6 +5,9 @@ body:
   - type: markdown
     attributes:
       value: |
+        Write this request in English — issues and pull requests in this
+        repository are English only.
+
         Keep in mind what the guard is: it observes, it never restarts anything,
         and it only writes to `z2m_guard/#` and its own discovery configs.
         Anything that would sit in the Zigbee data path is a different tool.
