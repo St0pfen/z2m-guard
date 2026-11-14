@@ -45,6 +45,12 @@
   smoke-tests the pushed image before the release is cut.
 - `tests/golden/*.json` reblessed for `sw_version` 0.1.1; the diff is exactly six
   lines, all `"sw_version"` — no other field of the discovery contract moved.
+- release automation learned two things from its own first run: artifacts are
+  downloaded by pattern (`bin-*`, `sbom`) instead of "everything", because a
+  failed blob download of setup-buildx's BuildKit artifact aborted the release
+  step after five retries; and the sbom artifact's `dist/` tree is flattened
+  before the upload, otherwise `files: artifacts/*` silently skips
+  `THIRD-PARTY-LICENSES.txt`, `LICENSE-MIT` and `LICENSE-APACHE`.
 - per-crate `*.cdx.json` untracked and ignored: `cargo-cyclonedx` writes them next
   to the manifest and `build-release.sh` moves them into `dist/`, so the committed
   copies were stale build intermediates. The SBOM of record is
