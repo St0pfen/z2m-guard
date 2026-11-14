@@ -150,6 +150,10 @@ repo the API accepts `{"has_wiki": true}` with HTTP 200 and silently keeps the f
 false, and `<repo>.wiki.git` does not exist — the script checks both and exits with
 that reason instead of failing on a confusing clone error.
 
+Everything else that only works once the repo is public — visibility switch, wiki,
+GHCR package visibility and link, anonymous-pull proof, README sweep, announcement
+order — is ordered in **`docs/PUBLISH.md`**.
+
 ## CI note
 
 Two workflows live in `.github/workflows/`: `ci.yml` (fmt + clippy + tests on

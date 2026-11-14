@@ -29,6 +29,15 @@
   (`cargo +1.85.0 check --workspace --all-features --locked`).
 
 ### Repository
+- Hygiene before the switch to public: merged branches deleted (6 local, 3
+  remote — each verified with `git cherry main <branch>`, all `-`, i.e. the patch
+  is already upstream), `delete_branch_on_merge` enabled so squash-merged
+  Dependabot branches disappear by themselves, and the duplicate 21 MB
+  `dist/*-wsl.oci.tar` plus the superseded 0.1.0 archive removed.
+- `docs/PUBLISH.md`: the go-public checklist with the two traps measured on this
+  repo — the wiki flag that GitHub accepts and ignores on a private repo, and
+  `GET /user/packages/container/…` returning 403 / `PATCH …/visibility` 404
+  because the token has no `read:packages`/`write:packages`.
 - CI is live: `.github/workflows/ci.yml` runs fmt, clippy and the full suite on
   every push/PR and builds the locked tree on the declared MSRV 1.85, so
   `rust-version` is enforced instead of asserted.
