@@ -53,6 +53,18 @@
   --all-features -D warnings` clean, `cargo test --workspace --all-features`
   **49 passed, 0 failed**.
 
+### Verified on the reference host
+- musl artifact: `6,609,856 B`, `static-pie linked`, stripped, sha256
+  `f1dd0ada4d48…6944`; runs on alpine, `--version` prints `z2m-guard 0.1.1`;
+  `SHA256SUMS` verifies all five entries; CycloneDX 1.5 SBOM with 127 components.
+- multi-arch archive `dist/z2m-guard-0.1.1.oci.tar`, manifest list
+  `sha256:26c1f7a3a02c…2686`; extracted binaries 6,419,992 B (amd64) and
+  5,118,680 B (arm64), both **max `GLIBC_2.34`** — down from the 2.38 of the
+  broken build — and both print `z2m-guard 0.1.1` (arm64 under qemu, inside
+  `distroless/cc-debian12`).
+- GitHub Actions: run `43547692132` on the release commit — `test`, `msrv` and
+  `image` all green; the `image` job builds the container **and executes** it.
+
 ## 0.1.0 — 2026-11-13
 
 ### Added

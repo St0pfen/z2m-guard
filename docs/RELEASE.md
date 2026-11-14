@@ -70,6 +70,16 @@ binfmt entry the arm64 leg dies with "exec format error". Expect ~15 minutes for
 arm64 under emulation on a cold cache — the Dockerfile's cache mounts exist for
 exactly that reason.
 
+**Trap: a changed base image does not always invalidate the cache.** Changing
+`FROM rust:1.100-slim` to `rust:1.100-slim-bookworm` and rebuilding with the
+container builder produced byte-identical manifests to the *previous, broken*
+build — same config digests, same `GLIBC_2.38` requirement. `--no-cache` compiled
+it correctly. After any base-image change, verify by running the image
+(`docker run --rm <img> --version`), not by trusting the exit code, and if the
+digests did not move, `docker buildx prune --builder <name> --all --force` before
+rebuilding the release archive. CI uses a fresh builder per run, so the release
+pipeline is not affected.
+
 ### Offloading the build to another machine
 
 The build can run on any host with a Docker daemon reachable over SSH; the OCI
