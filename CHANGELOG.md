@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Dependencies (four majors, each gated on the full suite — 48 tests afterwards)
+- `axum` 0.7.9 → 0.8.9 — drop-in: no dynamic path segments, every handler is a
+  plain `async fn`; the router status matrix (202/400/401/408/413/503) passes.
+- `toml` 0.8.23 → 1.2.1 (+`spec-1.1.0`) — drop-in: one `toml::from_str` call site,
+  the config tests (defaults, partial file, missing file) are unchanged.
+- `rumqttc` 0.24.0 → 0.25.1 — drop-in: the `MqttOptions`/`Event` surface used here
+  did not move; the broker integration test still passes against a live broker.
+- `tower-http` 0.5.2 → 0.7.1 — `TimeoutLayer::new` is deprecated since 0.6.7;
+  replaced with `TimeoutLayer::with_status_code(REQUEST_TIMEOUT, ..)` and now
+  covered by a test (`a_hung_request_answers_408_not_500`), because the 5 s cap
+  was the one status code in the matrix nobody asserted.
+- MSRV unchanged: the bumped lock still builds on the declared 1.85
+  (`cargo +1.85.0 check --workspace --all-features --locked`).
+
 ## 0.1.0 — 2026-11-13
 
 ### Added
