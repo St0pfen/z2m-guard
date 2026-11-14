@@ -130,10 +130,23 @@ jobs:
     needs: [build, sbom, image]
     runs-on: ubuntu-latest
     steps:
+      # Download by pattern, not "everything": setup-buildx-action stores its
+      # BuildKit binary as a run artifact (<owner>~<repo>~<hash>.dockerbuild), and
+      # a single failed blob download of that irrelevant artifact aborted the whole
+      # release step with "Unable to download and extract artifact ... after 5
+      # retries". Only bin-* and sbom belong in the release.
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
+          pattern: bin-*
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+          pattern: sbom
+      - name: Show what will be attached
+        run: ls -l artifacts
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
