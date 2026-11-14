@@ -187,6 +187,17 @@ pub fn parse_connect(packet: &[u8]) -> Option<ConnectInfo> {
     let client_id = read_string(b, &mut pos)?;
 
     let will = if flags & 0x04 != 0 {
+        // MQTT 5 puts a length-prefixed property block in front of the will topic.
+        // Without this the will payload's length prefix is read from the property
+        // bytes and the will arrives corrupted — found by adding an MQTT 5 client
+        // after the broker log showed HA negotiating level 5.
+        if protocol_level == 5 {
+            let props_len = read_varint(b, &mut pos)?;
+            pos += props_len;
+            if pos > b.len() {
+                return None;
+            }
+        }
         let topic = read_string(b, &mut pos)?;
         let payload = read_bytes_chunk(b, &mut pos)?.to_vec();
         Some(Will {
@@ -260,6 +271,10 @@ pub fn build_connect(
     }
 
     put_string(&mut v, client_id);
+    if will.is_some() && level == 5 {
+        // Same field order as above: the will's property block comes first.
+        v.push(0);
+    }
     if let Some(w) = will {
         put_string(&mut v, &w.topic);
         v.extend_from_slice(&(w.payload.len() as u16).to_be_bytes());
@@ -443,6 +458,67 @@ mod tests {
         assert_eq!(info.client_id, "zigbee2mqtt");
         assert_eq!(info.will, Some(will));
         assert_eq!(info.keep_alive, 60);
+    }
+
+    #[test]
+    fn parses_connect_with_will_and_level_5() {
+        // The will sits behind its own property block in MQTT 5. Both directions are
+        // checked: what we parse, and what we re-issue upstream must stay readable.
+        let will = Will {
+            topic: "zigbee2mqtt/bridge/state".into(),
+            payload: br#"{"state":"offline"}"#.to_vec(),
+            qos: 1,
+            retain: true,
+        };
+        let pkt = build_connect(
+            5,
+            "zigbee2mqtt",
+            Some(&will),
+            Some("z2mguard"),
+            Some("secret"),
+            45,
+        );
+        let info = parse_connect(&pkt).expect("connect");
+        assert_eq!(info.protocol_level, 5);
+        assert!(info.is_mqtt5());
+        assert_eq!(info.client_id, "zigbee2mqtt");
+        assert_eq!(info.will, Some(will.clone()));
+        assert_eq!(info.keep_alive, 45);
+    }
+
+    #[test]
+    fn parses_a_client_built_mqtt5_connect_with_will_properties() {
+        // Hand-assembled the way a real MQTT 5 client sends it: connect properties
+        // (session expiry = 0, 1 byte) and will properties (payload format = UTF-8,
+        // 2 bytes) in front of the will topic. A parser that ignores the will property
+        // block reads the payload length from these bytes and corrupts the will.
+        let mut body = Vec::new();
+        put_string(&mut body, "MQTT");
+        body.push(5);
+        body.push(0x26); // clean start + will + will retain
+        body.extend_from_slice(&30u16.to_be_bytes());
+        body.push(2); // connect properties length
+        body.push(0x11); // session expiry interval
+        body.push(0x00);
+        put_string(&mut body, "ha-client");
+        body.push(2); // will properties length
+        body.push(0x01); // payload format indicator
+        body.push(0x01); // UTF-8
+        put_string(&mut body, "homeassistant/status");
+        body.extend_from_slice(&5u16.to_be_bytes());
+        body.extend_from_slice(b"gone!");
+
+        let mut pkt = vec![CONNECT << 4];
+        put_remaining_len(&mut pkt, body.len());
+        pkt.extend_from_slice(&body);
+
+        let info = parse_connect(&pkt).expect("connect");
+        assert_eq!(info.protocol_level, 5);
+        assert_eq!(info.client_id, "ha-client");
+        let will = info.will.expect("will");
+        assert_eq!(will.topic, "homeassistant/status");
+        assert_eq!(will.payload, b"gone!");
+        assert!(will.retain);
     }
 
     #[test]

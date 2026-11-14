@@ -96,19 +96,58 @@ The proxy connects upstream with the guard's own MQTT user (`mqtt.username`,
 `mqtt.password_env`), not with Z2M's — the proxy is the one holding the
 least-privilege account.
 
+## Measurements
+
+All numbers below were measured on 2026-11-14 against a throwaway Mosquitto 2 and the
+reference host's broker log — not estimated.
+
+**Protocol versions in the real stack** (from `/opt/home-assistant/mosquitto/log`, last
+7 days; the log's `p4` = MQTT 3.1.1, `p5` = MQTT 5.0, confirmed empirically by putting a
+v5 client through the proxy and reading `p5` in the broker's own log):
+
+| client | address | version |
+| --- | --- | --- |
+| Zigbee2MQTT (`mqttjs_*`) | 172.22.1.2 | MQTT 3.1.1 (`p4`) |
+| Home Assistant (`u'hass'`) | 172.22.1.1 | **both** 3.1.1 and 5.0 |
+| z2m-guard | 172.22.1.51 | MQTT 3.1.1 (`p4`) |
+
+That measurement paid off immediately: it exposed two real MQTT 5 defects in the
+codec, both fixed and covered by tests — `parse_connect` read the will payload length
+from the v5 *will property* bytes (corrupting the will of every v5 client with a will),
+and `build_connect` re-issued a v5 CONNECT with no will property block at all. Proxy
+traffic for Z2M is 3.1.1 today, so neither would have shown up in production; HA
+already speaks 5.0 to the broker and would break the day it is routed through the proxy.
+
+**Throughput** (5000 QoS 1 publishes from one client, loopback, same broker):
+
+- direct to the broker: **11 212 msg/s**
+- through the proxy: **10 296 msg/s** → ~8 % cost, ~50× the 200 msg/s target
+
+**Discovery storm** (20 topics × 10 rounds, identical retained payloads, through the
+proxy): 200 publishes → **20 arrived at the broker**, `z2m_guard_discovery_deduped_total
+= 180`, exactly one retained config per topic afterwards. No duplicate in the broker.
+
+**Proxy death** (`SIGKILL` mid-session):
+
+- the listening socket closes at once, no half-open session, client sees an abrupt close
+- a connected client reconnects **on its own** as soon as the proxy is back
+  (`session established client=fo-client` after restart) — measured with `mosquitto_sub`;
+  Z2M's own retry timing (mqtt.js backoff) is *not* measured and needs a real Z2M
+- retained messages are delivered again on that reconnect: dedupe is publish-side only,
+  it never suppresses broker → client traffic
+- while the proxy is down, Z2M has no broker at all, so the guard sees an unavailable
+  bridge and — correctly — raises an outage. **Operationally a proxy crash therefore
+  looks like a Z2M outage.** Whoever deploys this has to know that before trusting the
+  alarm.
+
 ## Open items before this can be released
 
-These are *not* done, and none of them can be replaced by the unit tests:
-
-1. **MQTT version measurement.** The plan requires measuring which protocol version
-   Z2M and HA actually negotiate against the real broker before shipping this. The
-   code preserves the client's version and forwards frames verbatim, but that is a
-   design argument, not a measurement.
-2. **Load test.** Target from the plan: 200 messages/s sustained. Not run.
-3. **Failover behaviour.** What Z2M does when the proxy dies mid-session (reconnect
-   timing, retained-state effects) has to be observed on a real stack.
-4. **Fast-path cost.** The relay reads packet-by-packet with several small reads;
-   throughput on the reference host is unmeasured.
+1. **Z2M's own reconnect behaviour** through the proxy (backoff, retained-state
+   effects). The client-side behaviour is measured, the Z2M-side is not.
+2. **A load test with a real Z2M** during a restart, i.e. the actual storm shape,
+   instead of a synthetic one.
+3. **arm64 throughput.** The multi-arch image builds and runs, but every number above
+   was taken on amd64.
 
 ## Tests that do exist
 

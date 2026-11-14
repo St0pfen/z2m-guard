@@ -472,4 +472,63 @@ mod tests {
             "proxy uses its own id"
         );
     }
+
+    #[tokio::test]
+    async fn mqtt5_client_keeps_level_and_will_upstream() {
+        // The broker log on the reference host showed Home Assistant negotiating both
+        // 3.1.1 and 5.0. A v5 client through the proxy must not be downgraded, and its
+        // will has to survive the property block that precedes it in v5.
+        let listener = TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("test fixture");
+        let addr = listener.local_addr().expect("test fixture");
+        let seen = tokio::spawn(async move {
+            let (mut sock, _) = listener.accept().await.expect("test fixture");
+            let pkt = read_packet(&mut sock)
+                .await
+                .expect("test fixture")
+                .expect("test fixture");
+            let info = parse_connect(&pkt).expect("test fixture");
+            // Answer as a v5 broker would, otherwise the proxy's CONNACK wait hangs.
+            sock.write_all(&build_connack(5, false, 0))
+                .await
+                .expect("test fixture");
+            info
+        });
+
+        let (proxy, _stats) = proxy_for(addr, vec!["homeassistant/#".into()]).await;
+        let mut client = TcpStream::connect(proxy).await.expect("test fixture");
+        let will = Will {
+            topic: "homeassistant/status".into(),
+            payload: br#"{"state":"offline"}"#.to_vec(),
+            qos: 1,
+            retain: true,
+        };
+        client
+            .write_all(&build_connect(
+                5,
+                "ha-client",
+                Some(&will),
+                Some("hass"),
+                Some("secret"),
+                30,
+            ))
+            .await
+            .expect("test fixture");
+
+        let connack = tokio::time::timeout(Duration::from_secs(2), read_packet(&mut client))
+            .await
+            .expect("connack arrived")
+            .expect("test fixture")
+            .expect("test fixture");
+        assert_eq!(packet_type(&connack), CONNACK);
+
+        let upstream = tokio::time::timeout(Duration::from_secs(2), seen)
+            .await
+            .expect("upstream connect arrived")
+            .expect("join");
+        assert_eq!(upstream.protocol_level, 5, "level must not be downgraded");
+        assert_eq!(upstream.will, Some(will));
+        assert_eq!(upstream.client_id, "z2m-guard-proxy-1");
+    }
 }

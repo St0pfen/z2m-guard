@@ -19,9 +19,19 @@
   construction — a gap found only by building on the remote builder.
 - CI now checks **both** sides of the gate: the plain image must refuse
   `proxy.enabled = true`, the proxy image must open the listener.
-- Deliberately **not** released: the plan requires an MQTT-version measurement, a
-  200 msg/s load test and a failover observation on a real stack first. See
-  `docs/PROXY.md` for the open list.
+- **Measurement against the real stack** (broker log, last 7 days): Zigbee2MQTT speaks
+  MQTT 3.1.1, Home Assistant negotiates both 3.1.1 and 5.0. That immediately exposed
+  two MQTT 5 defects in the codec — a v5 client's will was parsed from the wrong offset
+  (the will property block was ignored) and the re-issued v5 CONNECT carried no will
+  property block at all. Both fixed, covered by tests, and verified live: a v5 client's
+  will reached the broker when the client was killed.
+- Throughput 10 296 msg/s through the proxy vs 11 212 direct (~8 % cost); the synthetic
+  discovery storm dropped 180 of 200 duplicate retained publishes with zero duplicates
+  at the broker; a `SIGKILL`ed proxy closes the socket immediately and the client
+  reconnects on its own.
+- Deliberately **not** released: Z2M's own reconnect behaviour through the proxy, a
+  load test with a real Z2M restart (the actual storm shape) and arm64 throughput are
+  still open. See `docs/PROXY.md`.
 
 ## 0.1.2 — 2026-11-14
 
