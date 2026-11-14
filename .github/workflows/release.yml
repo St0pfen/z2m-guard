@@ -118,12 +118,40 @@ jobs:
       # image that built fine and died on "GLIBC_2.38 not found").
       - name: Smoke-test the published image
         run: docker run --rm "ghcr.io/st0pfen/z2m-guard:${GITHUB_REF_NAME#v}" --version
-      - name: Record the digest for the release notes
+      # The default image is built without the proxy feature on purpose. The mode is
+      # shipped as a second, explicitly named image — `<version>-proxy` — so nobody
+      # pulls a proxy build by accident, and `<version>` keeps meaning the same binary
+      # it meant before.
+      - name: Proxy image metadata
+        id: meta-proxy
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/st0pfen/z2m-guard
+          tags: |
+            type=semver,pattern={{version}}-proxy
+            type=semver,pattern={{major}}.{{minor}}-proxy
+      - name: Build and push (amd64 + arm64, FEATURES=proxy)
+        id: push-proxy
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta-proxy.outputs.tags }}
+          labels: ${{ steps.meta-proxy.outputs.labels }}
+          build-args: FEATURES=proxy
+      - name: Smoke-test the published proxy image
+        run: docker run --rm "ghcr.io/st0pfen/z2m-guard:${GITHUB_REF_NAME#v}-proxy" --version
+      - name: Record the digests for the release notes
         run: |
-          echo "### Image" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Images" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "default:" >> "$GITHUB_STEP_SUMMARY"
           echo "${{ steps.meta.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
           echo "${{ steps.push.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "proxy:" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.meta-proxy.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.push-proxy.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
   release:

@@ -53,7 +53,20 @@ proxy failure can never hide the guard's own entities from HA.
 
 ## Enabling it
 
-Build with the feature, then turn it on in config:
+Either pull the proxy image, or build one yourself:
+
+```bash
+docker pull ghcr.io/st0pfen/z2m-guard:<version>-proxy
+# or
+docker build --build-arg FEATURES=proxy -t z2m-guard:proxy .
+```
+
+The default image is built **without** the feature on purpose: `--build-arg FEATURES=proxy`
+is what puts the mode into the binary, and `<version>` keeps meaning the same
+feature-less binary it always meant. A binary built without the feature refuses the
+config at startup instead of silently ignoring it.
+
+For a host build:
 
 ```bash
 cargo build --release --features proxy

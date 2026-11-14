@@ -87,8 +87,8 @@ That posts an intent, then runs `docker compose up -d --force-recreate` for Z2M.
   `rustls-webpki` branch with open advisories (see `SECURITY.md`). Keep the broker
   on a private network as the reference stack does.
 - The guard observes; it does not restart anything.
-- Discovery republish storms are not reduced by default. Proxy mode (M5) exists on
-  the `feat/m5-proxy` branch behind `--features proxy + [proxy] enabled = true`, but
+- Discovery republish storms are not reduced by default. Proxy mode (M5) exists behind
+  `--features proxy` / the `<version>-proxy` image plus `[proxy] enabled = true`, but
   it is unvalidated: no MQTT-version measurement, no load test, no failover
   observation yet. See `docs/PROXY.md`.
 - Runs under a dedicated Mosquitto user with a least-privilege ACL

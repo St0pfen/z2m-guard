@@ -55,6 +55,52 @@ jobs:
           cache-to: type=gha,mode=max
       - name: The image must actually run
         run: docker run --rm z2m-guard:ci --version
+      # M5 ships as a second image: the default one is built without the proxy
+      # feature, so `proxy.enabled = true` inside it was a startup error and nobody
+      # could ever turn the mode on. Both sides are checked here — the plain image
+      # must refuse the flag, the proxy image must open the listener.
+      - name: Build (amd64, FEATURES=proxy)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: z2m-guard:ci-proxy
+          build-args: FEATURES=proxy
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: The proxy image must actually run
+        run: docker run --rm z2m-guard:ci-proxy --version
+      - name: Both sides of the feature gate
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/proxy.toml" <<'EOF'
+          [mqtt]
+          url = "mqtt://127.0.0.1:1883"
+          [http]
+          bind = "127.0.0.1:18089"
+          [proxy]
+          enabled = true
+          listen = "127.0.0.1:11884"
+          EOF
+          if docker run --rm -v "$RUNNER_TEMP/proxy.toml:/proxy.toml" z2m-guard:ci \
+               --config /proxy.toml 2>&1 | grep -q "requires a build with --features proxy"; then
+            echo "plain image refuses proxy.enabled, as intended"
+          else
+            echo "::error::the plain image did not refuse proxy.enabled"
+            exit 1
+          fi
+          docker run --rm -d --name proxygate \
+            -v "$RUNNER_TEMP/proxy.toml:/proxy.toml" z2m-guard:ci-proxy --config /proxy.toml
+          sleep 4
+          if docker logs proxygate 2>&1 | grep -q "proxy listening"; then
+            echo "proxy image opens the listener, as intended"
+          else
+            docker logs proxygate || true
+            docker rm -f proxygate || true
+            echo "::error::the proxy image did not start a listener"
+            exit 1
+          fi
+          docker rm -f proxygate
 
   # rust-version in Cargo.toml is a promise, not a comment: CHANGELOG entries have
   # claimed MSRV 1.85 before while nothing enforced it. This job builds the locked
