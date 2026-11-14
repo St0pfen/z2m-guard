@@ -1,4 +1,4 @@
-# Draft announcement (not posted — repository is still private)
+# Announcement draft (not posted)
 
 ## For r/homeassistant and the Zigbee2MQTT discussions
 
