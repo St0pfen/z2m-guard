@@ -36,6 +36,13 @@
   README claim "a multi-arch image ships with every tag" was only true for a
   hand-run `buildx` on one host; the tag pipeline now pushes
   `ghcr.io/st0pfen/z2m-guard` for `linux/amd64` and `linux/arm64`.
+- **Docker image was unstartable on both architectures.** The build stage used
+  `rust:1.100-slim`, whose base moved from bookworm to trixie upstream, so the
+  binary linked `GLIBC_2.38` while the distroless `cc-debian12` runtime ships
+  glibc 2.36 — `docker build` succeeded, `docker run --version` died with
+  `GLIBC_2.38 not found`. Stage 1 is pinned to `rust:1.100-slim-bookworm`; CI now
+  builds the image and runs it (`ci.yml` job `image`), and the release job
+  smoke-tests the pushed image before the release is cut.
 - `tests/golden/*.json` reblessed for `sw_version` 0.1.1; the diff is exactly six
   lines, all `"sw_version"` — no other field of the discovery contract moved.
 - per-crate `*.cdx.json` untracked and ignored: `cargo-cyclonedx` writes them next

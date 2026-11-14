@@ -1,5 +1,10 @@
 # syntax=docker/dockerfile:1
-FROM rust:1.100-slim AS build
+# Pinned to bookworm on purpose. Plain `rust:1.100-slim` moved to a trixie base
+# upstream, which links against glibc 2.38+; the runtime stage below is distroless
+# cc-debian12 (glibc 2.36), so the resulting image died at startup with
+# "GLIBC_2.38 not found" on *both* architectures while the build itself succeeded.
+# Measured: objdump -T on the binary requires GLIBC_2.38, cc-debian12 ships 2.36.
+FROM rust:1.100-slim-bookworm AS build
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates

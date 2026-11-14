@@ -113,6 +113,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+      # A pushed multi-arch image is not proof it starts; run the amd64 variant
+      # before the release is cut (the bookworm/trixie glibc drift produced an
+      # image that built fine and died on "GLIBC_2.38 not found").
+      - name: Smoke-test the published image
+        run: docker run --rm "ghcr.io/st0pfen/z2m-guard:${GITHUB_REF_NAME#v}" --version
       - name: Record the digest for the release notes
         run: |
           echo "### Image" >> "$GITHUB_STEP_SUMMARY"

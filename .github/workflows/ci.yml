@@ -25,6 +25,26 @@ jobs:
       - name: Test
         run: cargo test --workspace --all-features
 
+  # The build can succeed while the image cannot start: the build stage's base
+  # image moved from bookworm to trixie upstream and linked glibc 2.38, the
+  # distroless runtime ships 2.36, and the container died with "GLIBC_2.38 not
+  # found". A green `docker build` proves nothing — this job runs the thing.
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build (amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: z2m-guard:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: The image must actually run
+        run: docker run --rm z2m-guard:ci --version
+
   # rust-version in Cargo.toml is a promise, not a comment: CHANGELOG entries have
   # claimed MSRV 1.85 before while nothing enforced it. This job builds the locked
   # tree on exactly that toolchain (1.85 cannot run edition2024 dependencies, so a
