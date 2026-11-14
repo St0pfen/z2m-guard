@@ -58,17 +58,41 @@ struct OkResponse {
     window_s: u64,
 }
 
+/// 5 s cap on a request: a stalled client must not pin a task, and the layer
+/// answers 408 (not 500) so a timeout stays distinguishable from a broken handler.
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
+
 pub fn router(state: AppState) -> Router {
-    Router::new()
-        .route("/healthz", get(healthz))
-        .route("/metrics", get(metrics))
-        // The only endpoint with a body, and its body is a few bytes of JSON.
-        // Anything larger is a mistake or an attack; 408 on a hung request keeps
-        // a stalled client from pinning a task forever.
-        .route("/v1/restart-intent", post(restart_intent))
+    with_limits(
+        Router::new()
+            .route("/healthz", get(healthz))
+            .route("/metrics", get(metrics))
+            // The only endpoint with a body, and its body is a few bytes of JSON.
+            // Anything larger is a mistake or an attack.
+            .route("/v1/restart-intent", post(restart_intent)),
+    )
+    .with_state(state)
+}
+
+fn with_limits<S>(router: Router<S>) -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
+    with_limits_for(router, REQUEST_TIMEOUT)
+}
+
+/// The one place the limits are configured, so the test proving 408 exercises
+/// the same layer construction the shipped router uses.
+fn with_limits_for<S>(router: Router<S>, timeout: Duration) -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
+    router
         .layer(DefaultBodyLimit::max(4096))
-        .layer(TimeoutLayer::new(Duration::from_secs(5)))
-        .with_state(state)
+        .layer(TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            timeout,
+        ))
 }
 
 async fn healthz() -> impl IntoResponse {
@@ -236,5 +260,21 @@ mod tests {
         let status = post_intent(app, "anything", Body::empty()).await;
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
         assert!(rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn a_hung_request_answers_408_not_500() {
+        async fn slow() -> &'static str {
+            tokio::time::sleep(Duration::from_millis(200)).await;
+            "late"
+        }
+        // Same layer construction as `router`, only with a test-sized deadline.
+        let app: Router = with_limits_for(
+            Router::new().route("/slow", get(slow)),
+            Duration::from_millis(20),
+        );
+        let req = Request::get("/slow").body(Body::empty()).expect("request");
+        let status = app.oneshot(req).await.expect("response").status();
+        assert_eq!(status, StatusCode::REQUEST_TIMEOUT);
     }
 }
