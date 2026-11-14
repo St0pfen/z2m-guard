@@ -95,7 +95,7 @@ That posts an intent, then runs `docker compose up -d --force-recreate` for Z2M.
 ## Build & release
 
 ```bash
-cargo build --release                 # needs a C toolchain (rustls/ring)
+cargo build --release
 ./deploy/build-release.sh             # static musl binary + SHA256SUMS + CycloneDX SBOM
 docker buildx build --platform linux/amd64,linux/arm64 -t z2m-guard:0.1.2 .
 ```
@@ -140,32 +140,18 @@ Contributions are accepted under the same dual licence (Apache-2.0 §5); no CLA.
 
 ## Wiki
 
-Wiki sources live in `wiki/` (`Home.md`, `_Sidebar.md`, `_Footer.md`); the
-installation page is generated from `docs/INSTALL.md` at publish time, so it cannot
-drift from the reviewed file. Publish with:
+The wiki is generated from `wiki/` (`Home.md`, `_Sidebar.md`, `_Footer.md`); the
+installation page is built from `docs/INSTALL.md` at publish time, so it cannot
+drift from the reviewed file:
 
 ```bash
 ./scripts/publish-wiki.sh
 ```
 
-The script is honest about the one hard blocker: GitHub does not offer wikis on
-**private** repositories unless the account has Pro/Team/Enterprise. On a private
-repo the API accepts `{"has_wiki": true}` with HTTP 200 and silently keeps the flag
-false, and `<repo>.wiki.git` does not exist — the script checks both and exits with
-that reason instead of failing on a confusing clone error.
+## CI
 
-Everything else that only works once the repo is public — visibility switch, wiki,
-GHCR package visibility and link, anonymous-pull proof, README sweep, announcement
-order — is ordered in **`docs/PUBLISH.md`**.
-
-## CI note
-
-Two workflows live in `.github/workflows/`: `ci.yml` (fmt + clippy + tests on
-every push and PR, plus a job that builds the locked tree on the declared MSRV
-1.85) and `release.yml` (tag push → musl binaries for amd64/arm64, CycloneDX
-SBOM, licence notices, multi-arch image pushed to GHCR, draft release with every
-asset attached).
-
-Creating those files needs a token with the `workflow` scope. An OAuth token
-without it gets a bare HTTP 404 from the contents API and a push rejection —
-GitHub hides the real reason, so don't read the 404 as "path wrong".
+Two workflows live in `.github/workflows/`: `ci.yml` (fmt, clippy `-D warnings`,
+tests, `cargo audit`, an MSRV build on 1.85, and a job that builds the image and
+actually starts it) and `release.yml` (tag push → musl binaries for amd64/arm64,
+CycloneDX SBOM, licence notices, multi-arch image pushed to GHCR, release with
+every asset attached).

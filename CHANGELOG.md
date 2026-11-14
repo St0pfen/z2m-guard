@@ -70,7 +70,8 @@
   is already upstream), `delete_branch_on_merge` enabled so squash-merged
   Dependabot branches disappear by themselves, and the duplicate 21 MB
   `dist/*-wsl.oci.tar` plus the superseded 0.1.0 archive removed.
-- `docs/PUBLISH.md`: the go-public checklist with the two traps measured on this
+- `docs/PUBLISH.md` (removed in 0.1.2 once executed): the go-public checklist with
+  the two traps measured on this
   repo — the wiki flag that GitHub accepts and ignores on a private repo, and
   `GET /user/packages/container/…` returning 403 / `PATCH …/visibility` 404
   because the token has no `read:packages`/`write:packages`.
