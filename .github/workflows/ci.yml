@@ -73,29 +73,39 @@ jobs:
       - name: Both sides of the feature gate
         run: |
           set -euo pipefail
-          cat > "$RUNNER_TEMP/proxy.toml" <<'EOF'
-          [mqtt]
-          url = "mqtt://127.0.0.1:1883"
-          [http]
-          bind = "127.0.0.1:18089"
-          [proxy]
-          enabled = true
-          listen = "127.0.0.1:11884"
-          EOF
-          if docker run --rm -v "$RUNNER_TEMP/proxy.toml:/proxy.toml" z2m-guard:ci \
-               --config /proxy.toml 2>&1 | grep -q "requires a build with --features proxy"; then
-            echo "plain image refuses proxy.enabled, as intended"
-          else
+          # printf instead of a heredoc: YAML block indentation silently reformats
+          # heredoc bodies, and a malformed config would look like a product defect.
+          printf '%s\n' \
+            '[mqtt]' \
+            'url = "mqtt://127.0.0.1:1883"' \
+            '[http]' \
+            'bind = "127.0.0.1:18089"' \
+            '[proxy]' \
+            'enabled = true' \
+            'listen = "127.0.0.1:11884"' > "$RUNNER_TEMP/proxy.toml"
+          cat "$RUNNER_TEMP/proxy.toml"
+
+          set +e
+          plain_out=$(docker run --rm -v "$RUNNER_TEMP/proxy.toml:/proxy.toml" \
+            z2m-guard:ci --config /proxy.toml 2>&1)
+          plain_rc=$?
+          set -e
+          echo "plain image exit=$plain_rc"
+          echo "$plain_out"
+          if [ "$plain_rc" -eq 0 ] || ! grep -q "requires a build with --features proxy" <<<"$plain_out"; then
             echo "::error::the plain image did not refuse proxy.enabled"
             exit 1
           fi
+          echo "plain image refuses proxy.enabled, as intended"
+
           docker run --rm -d --name proxygate \
             -v "$RUNNER_TEMP/proxy.toml:/proxy.toml" z2m-guard:ci-proxy --config /proxy.toml
           sleep 4
-          if docker logs proxygate 2>&1 | grep -q "proxy listening"; then
+          proxy_out=$(docker logs proxygate 2>&1 || true)
+          echo "$proxy_out"
+          if grep -q "proxy listening" <<<"$proxy_out"; then
             echo "proxy image opens the listener, as intended"
           else
-            docker logs proxygate || true
             docker rm -f proxygate || true
             echo "::error::the proxy image did not start a listener"
             exit 1
