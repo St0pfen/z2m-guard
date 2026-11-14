@@ -14,14 +14,14 @@
     "manufacturer": "z2m-guard",
     "model": "restart watchdog",
     "name": "Z2M Guard",
-    "sw_version": "0.1.0"
+    "sw_version": "0.1.1"
   },
   "icon": "mdi:shield-sync",
   "name": "Restart window",
   "origin": {
     "name": "z2m-guard",
     "support_url": "https://github.com/St0pfen/z2m-guard",
-    "sw_version": "0.1.0"
+    "sw_version": "0.1.1"
   },
   "payload_off": "OFF",
   "payload_on": "ON",

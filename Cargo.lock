@@ -458,14 +458,14 @@ dependencies = [
 
 [[package]]
 name = "guard-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proptest",
 ]
 
 [[package]]
 name = "guard-docker"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "guard-core",
  "serde",
@@ -475,7 +475,7 @@ dependencies = [
 
 [[package]]
 name = "guard-ha"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "guard-core",
  "serde",
@@ -484,7 +484,7 @@ dependencies = [
 
 [[package]]
 name = "guard-mqtt"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "guard-core",
  "rumqttc",
@@ -497,7 +497,7 @@ dependencies = [
 
 [[package]]
 name = "guard-proxy"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "guard-core",
 ]
@@ -1600,7 +1600,7 @@ dependencies = [
 
 [[package]]
 name = "z2m-guard"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "axum",

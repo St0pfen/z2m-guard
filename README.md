@@ -93,7 +93,7 @@ That posts an intent, then runs `docker compose up -d --force-recreate` for Z2M.
 ```bash
 cargo build --release                 # needs a C toolchain (rustls/ring)
 ./deploy/build-release.sh             # static musl binary + SHA256SUMS + CycloneDX SBOM
-docker buildx build --platform linux/amd64,linux/arm64 -t z2m-guard:0.1.0 .
+docker buildx build --platform linux/amd64,linux/arm64 -t z2m-guard:0.1.1 .
 ```
 
 Full checklist: `docs/RELEASE.md`. Internals and the decisions behind them:

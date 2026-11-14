@@ -6,6 +6,10 @@
 config/local.toml
 config/verify.toml
 *.log
+# per-crate SBOMs are build intermediates: cargo-cyclonedx writes them next to the
+# manifest and build-release.sh moves them into dist/. The SBOM of record is
+# dist/z2m-guard-<version>.cdx.json, not a stale copy committed inside the crate.
+crates/*/*.cdx.json
 # CI file lives here until a token with the `workflow` scope is available
 
 # release artifacts

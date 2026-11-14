@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 — 2026-11-14
 
 ### Fixed
 - **Suppression window never expired while the MQTT broker was unreachable**
@@ -27,6 +27,17 @@
   was the one status code in the matrix nobody asserted.
 - MSRV unchanged: the bumped lock still builds on the declared 1.85
   (`cargo +1.85.0 check --workspace --all-features --locked`).
+
+### Repository
+- `tests/golden/*.json` reblessed for `sw_version` 0.1.1; the diff is exactly six
+  lines, all `"sw_version"` — no other field of the discovery contract moved.
+- per-crate `*.cdx.json` untracked and ignored: `cargo-cyclonedx` writes them next
+  to the manifest and `build-release.sh` moves them into `dist/`, so the committed
+  copies were stale build intermediates. The SBOM of record is
+  `dist/z2m-guard-<version>.cdx.json`.
+- gates on this tree: `cargo fmt --check` clean, `clippy --all-targets
+  --all-features -D warnings` clean, `cargo test --workspace --all-features`
+  **49 passed, 0 failed**.
 
 ## 0.1.0 — 2026-11-13
 
