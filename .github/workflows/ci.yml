@@ -25,6 +25,17 @@ jobs:
       - name: Test
         run: cargo test --workspace --all-features
 
+  # The 0.1.1 artifact linked rustls-webpki 0.102.8 with eight open advisories and
+  # nobody noticed until the release SBOM was scanned by hand. An advisory is a
+  # red build from now on.
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@cargo-audit
+      - name: Advisory scan (locked tree)
+        run: cargo audit --deny warnings
+
   # The build can succeed while the image cannot start: the build stage's base
   # image moved from bookworm to trixie upstream and linked glibc 2.38, the
   # distroless runtime ships 2.36, and the container died with "GLIBC_2.38 not

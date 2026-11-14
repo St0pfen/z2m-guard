@@ -14,7 +14,7 @@
     "manufacturer": "z2m-guard",
     "model": "restart watchdog",
     "name": "Z2M Guard",
-    "sw_version": "0.1.1"
+    "sw_version": "0.1.2"
   },
   "device_class": "duration",
   "icon": "mdi:timer-sand",
@@ -24,7 +24,7 @@
   "origin": {
     "name": "z2m-guard",
     "support_url": "https://github.com/St0pfen/z2m-guard",
-    "sw_version": "0.1.1"
+    "sw_version": "0.1.2"
   },
   "state_class": "measurement",
   "state_topic": "z2m_guard/last_restart",

@@ -274,7 +274,7 @@ For hosts without Docker (or when the guard should sit on another machine than t
 broker). Take the musl binary from `dist/` or the release page:
 
 ```bash
-install -m 0755 z2m-guard-0.1.1-x86_64-unknown-linux-musl /usr/local/bin/z2m-guard
+install -m 0755 z2m-guard-0.1.2-x86_64-unknown-linux-musl /usr/local/bin/z2m-guard
 install -d -m 0750 /etc/z2m-guard
 install -m 0600 /dev/null /etc/z2m-guard/z2m-guard.env
 ```
@@ -384,7 +384,7 @@ maintainer: St0pfen
 
 ```yaml
 name: z2m-guard
-version: "0.1.1"
+version: "0.1.2"
 slug: z2m_guard
 description: Separate planned Zigbee2MQTT restarts from real outages
 arch: [amd64, aarch64]

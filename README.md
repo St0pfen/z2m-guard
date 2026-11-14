@@ -82,6 +82,10 @@ That posts an intent, then runs `docker compose up -d --force-recreate` for Z2M.
   privileges) or events piped on stdin (`--features stdin-events`). Reading the
   Docker socket directly is deliberately not implemented in v0.1: it is
   root-equivalent host access.
+- The MQTT connection is **plain TCP**. `mqtts://` is rejected, and since 0.1.2
+  the binary links no TLS stack at all — the one it used to carry was an EOL
+  `rustls-webpki` branch with open advisories (see `SECURITY.md`). Keep the broker
+  on a private network as the reference stack does.
 - The guard observes; it does not restart anything.
 - Discovery republish storms are not reduced in v1 — that is the optional proxy
   mode (M5).
@@ -93,7 +97,7 @@ That posts an intent, then runs `docker compose up -d --force-recreate` for Z2M.
 ```bash
 cargo build --release                 # needs a C toolchain (rustls/ring)
 ./deploy/build-release.sh             # static musl binary + SHA256SUMS + CycloneDX SBOM
-docker buildx build --platform linux/amd64,linux/arm64 -t z2m-guard:0.1.1 .
+docker buildx build --platform linux/amd64,linux/arm64 -t z2m-guard:0.1.2 .
 ```
 
 Full checklist: `docs/RELEASE.md`. Internals and the decisions behind them:

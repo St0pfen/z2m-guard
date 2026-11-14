@@ -32,7 +32,7 @@ guard-proxy = { path = "../guard-proxy" }
 anyhow = "1"
 axum = "0.8"
 clap = { version = "4", features = ["derive"] }
-rumqttc = "0.25"
+rumqttc = { version = "0.25", default-features = false }  # no TLS, see guard-mqtt/Cargo.toml
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "time", "sync", "net"] }

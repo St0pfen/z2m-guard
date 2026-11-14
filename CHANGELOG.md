@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.2 — 2026-11-14
+
+### Security
+- **Removed an EOL TLS stack from the artifact.** rumqttc's default feature
+  `use-rustls` pulled `rustls-webpki` 0.102.8 into the binary 0.1.1 shipped. An
+  OSV scan of that release's SBOM (127 components) returned ten findings, all in
+  two crates: eight advisories against webpki 0.102.8 — including
+  `GHSA-82j2-j2ch-gfr8` **HIGH** (DoS via panic on a malformed CRL BIT STRING) and
+  `GHSA-pwjx-qhcg-rvj4` **MODERATE** (CRLs not treated as authoritative) — plus
+  `RUSTSEC-2025-0134`, the unmaintained `rustls-pemfile` 2.2.0. Every webpki fix
+  landed on 0.103.x only; rumqttc 0.25.1 (current latest) pins `^0.102.8`.
+- The reachable surface was nil — `parse_broker_url` rejects `mqtts://` by design,
+  so the guard could never have used that stack — but it was compiled, linked and
+  listed in the SBOM. `rumqttc` now builds with `default-features = false`; plain
+  TCP to the broker is the supported transport, documented in `SECURITY.md`.
+- CI runs `cargo audit` on every push, so the next advisory shows up as a red
+  build instead of in a release SBOM.
+
+### Repository
+- golden discovery files reblessed for `sw_version` 0.1.2 (six lines, version only).
+
 ## 0.1.1 — 2026-11-14
 
 ### Fixed

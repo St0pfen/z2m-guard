@@ -23,6 +23,14 @@ Deliberate non-goals: the guard cannot restart, stop or reconfigure Zigbee2MQTT.
 - **Docker socket** — *not* mounted. The `docker-socket` feature exists but is
   unimplemented in v0.1 precisely because the socket is root-equivalent host
   access. Attribution uses the pre-restart script or stdin events instead.
+- **MQTT transport is plain TCP, on purpose.** `mqtts://` URLs are rejected by
+  `parse_broker_url`, and since 0.1.2 the binary no longer links a TLS stack at
+  all: rumqttc's `use-rustls` feature pulled `rustls-webpki` 0.102.8 (eight
+  advisories filed 2026, fixed only on the 0.103 branch) and the unmaintained
+  `rustls-pemfile` 2.2.0 into the artifact while nothing could reach them. Keep
+  the broker on a private Docker network (as the reference host does) instead of
+  exposing it; if TLS becomes a requirement, it needs an upstream rumqttc release
+  on webpki 0.103, not a local patch of the dead branch.
 - **Container** — distroless base, read-only root filesystem, no published host
   ports, Watchtower disabled (no unsigned image pulls).
 

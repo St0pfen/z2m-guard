@@ -20,7 +20,7 @@ public container package and no announcement venue. Measured, not assumed:
 
 ## 1. Before the switch (done)
 
-- [x] `v0.1.1` released with binaries, SBOM, licence texts and `SHA256SUMS`
+- [x] `v0.1.1` + `v0.1.2` released with binaries, SBOM, licence texts and `SHA256SUMS`
 - [x] CI green on `test`, `msrv` and `image`; tag pipeline publishes the image
 - [x] reference host runs the released version (`--version`, `/healthz`, discovery
       `sw_version` read back from the broker)
@@ -51,7 +51,7 @@ Then, in this order, because each step's result is the next one's input:
    repository*. Without the link the package shows no README and no provenance.
 3. **Anonymous pull proof** — in a shell that is logged out:
    ```bash
-   docker logout ghcr.io && docker pull ghcr.io/st0pfen/z2m-guard:0.1.1
+   docker logout ghcr.io && docker pull ghcr.io/st0pfen/z2m-guard:0.1.2
    ```
    A logged-in pull proves nothing; the visitor has no credentials.
 4. **README sweep.** The links that only resolve in public (`releases`, `wiki`,
