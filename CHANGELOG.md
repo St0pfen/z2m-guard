@@ -2,7 +2,16 @@
 
 ## Unreleased
 
-### M5 — proxy mode (not released, not validated)
+### M5 — proxy mode (implemented, measured, **premise disproved**)
+- The mode was built to dedupe discovery republish waves from Zigbee2MQTT. Measured on
+  the reference host, that wave does not come from Z2M: a real Z2M restart produced **1**
+  discovery publish, while the 106 retained `homeassistant/#` configs (97 132 bytes) are
+  delivered to every *consumer* that subscribes — i.e. Home Assistant on restart. A
+  proxy on the Z2M leg cannot see that traffic. **Not switched on in production**, because
+  it would add a single point of failure and a widened broker ACL for no gain.
+- Still useful as a tool: allowlist (fail closed), will preservation, protocol-level
+  fidelity, dedupe of repeated publishes when a script republishes.
+- Details, numbers and the open items: `docs/PROXY.md`.
 - `guard-proxy` is no longer a stub: a feature-gated MQTT relay that sits between
   Zigbee2MQTT and the broker, preserves the client's protocol level and **will**,
   enforces a topic allowlist (fail closed) and drops duplicate **retained** discovery

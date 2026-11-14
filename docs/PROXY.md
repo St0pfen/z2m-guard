@@ -140,6 +140,39 @@ proxy): 200 publishes → **20 arrived at the broker**, `z2m_guard_discovery_ded
   looks like a Z2M outage.** Whoever deploys this has to know that before trusting the
   alarm.
 
+## Does it solve the documented pain? — no, and that was measured
+
+The reason this mode exists is a note in the production compose file: an HA update on
+2026-10-24 "broke MQTT/Z2M and produced a discovery message wave — 179 messages,
+4.49 M tokens in one weekly run". That note puts the wave on the **consumer** side
+(Home Assistant re-subscribing and receiving retained configs), not on Zigbee2MQTT.
+
+Measured on the reference host, 2026-11-14:
+
+| what | measured |
+| --- | --- |
+| discovery publishes during a **Z2M restart** | **1** (one `bridge/...` publish) |
+| retained configs under `homeassistant/#` | **106 topics, 97 132 bytes, Ø 916 B** |
+| of those: sensor 35, select 17, button 11, update 10, device_automation 10, binary_sensor 9, switch 7, light 7 (3 are the guard's own) | |
+
+So Z2M 2.x does **not** republish its discovery tree on restart — it publishes on device
+or config changes only. The 106 configs are delivered to every client that subscribes,
+which is exactly what happens when Home Assistant restarts. A proxy between Z2M and the
+broker never sees that traffic and cannot reduce it; suppressing broker → client
+retained delivery would also break MQTT semantics (a subscriber is entitled to its
+retained state).
+
+Consequence: proxy mode does not fix the problem that motivated it. It remains useful as
+a tool (allowlist, will preservation, dedupe of repeated *publishes* when a tool or a
+script does republish), but it must not be sold as a cure for the discovery wave. The
+wave has to be attacked where it is produced: fewer discovery configs (disable the HA
+integration for devices that do not need it, prune unused entities), or in the consumer
+that turns those messages into tokens.
+
+This is why it was **not** switched on in production: routing Zigbee through a single
+process (a new single point of failure, a widened broker ACL) buys nothing when the
+traffic it targets does not occur.
+
 ## Open items before this can be released
 
 1. **Z2M's own reconnect behaviour** through the proxy (backoff, retained-state
