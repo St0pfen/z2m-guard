@@ -145,6 +145,17 @@ jobs:
           path: artifacts
           merge-multiple: true
           pattern: sbom
+      # The sbom artifact keeps the tree from the uploaded paths, so the licence
+      # files arrive under artifacts/dist/. `files: artifacts/*` is a top-level
+      # glob — a v0.1.1 run attached the SBOM but silently dropped
+      # THIRD-PARTY-LICENSES.txt, LICENSE-MIT and LICENSE-APACHE. Flatten first.
+      - name: Flatten the licence files
+        run: |
+          set -euo pipefail
+          if [ -d artifacts/dist ]; then
+            mv artifacts/dist/* artifacts/
+            rmdir artifacts/dist
+          fi
       - name: Show what will be attached
         run: ls -l artifacts
       - name: Release
