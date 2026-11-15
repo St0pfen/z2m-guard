@@ -91,7 +91,7 @@ That posts an intent, then runs `docker compose up -d --force-recreate` for Z2M.
   restart published a single discovery message, while the 106 retained `homeassistant/#`
   configs are delivered to every consumer that subscribes (Home Assistant on restart).
   Proxy mode (M5) is therefore shipped as a tool — `--features proxy` /
-  `<version>-proxy` image plus `[proxy] enabled = true` — and is **not** enabled in
+  `--build-arg FEATURES=proxy` plus `[proxy] enabled = true` — and is **not** enabled in
   production, because it cannot reduce that traffic. Numbers in `docs/PROXY.md`.
 - Runs under a dedicated Mosquitto user with a least-privilege ACL
   (`deploy/mosquitto/acl.example`); it does not use the shared service credential.

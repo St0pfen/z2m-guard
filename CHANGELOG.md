@@ -22,10 +22,10 @@
   semantics.
 - `[proxy]` config section, `--features proxy` build gate, and a startup refusal when
   `proxy.enabled = true` meets a binary without the feature.
-- The `Dockerfile` gained `ARG FEATURES=""` and the release pipeline a second image
-  `<version>-proxy` (`--build-arg FEATURES=proxy`). Before that the shipped image was
-  compiled without the feature, so proxy mode was unreachable in a container by
-  construction — a gap found only by building on the remote builder.
+- The `Dockerfile` gained `ARG FEATURES=""`. Before that the shipped image was compiled
+  without the feature, so proxy mode was unreachable in a container by construction — a
+  gap found only by building on the remote builder. No proxy image is published: build
+  one with `--build-arg FEATURES=proxy`.
 - CI now checks **both** sides of the gate: the plain image must refuse
   `proxy.enabled = true`, the proxy image must open the listener.
 - **Measurement against the real stack** (broker log, last 7 days): Zigbee2MQTT speaks

@@ -1,20 +1,20 @@
 # Proxy mode (M5) — implementation notes
 
-Status: **implemented on the `feat/m5-proxy` branch, not validated, not released.**
-The guard still does its normal job without it; nothing in a released artifact
-changes until this mode is enabled *and* has been measured against a real
-Zigbee2MQTT.
+Status: **implemented and measured; off by default, deployed nowhere.** The guard does
+its normal job without it, and no released artifact enables it. Read
+[Does it solve the documented pain?](#does-it-solve-the-documented-pain--no-and-that-was-measured)
+before switching it on: the measurement that was meant to validate the mode refuted the
+reason it was built.
 
-## Why it exists
+## Why it was built (hypothesis)
 
-Z2M republishes its whole discovery tree on every start. The payloads are identical
-and retained, so the broker already holds them — but every republish still travels
-to every subscriber. On the reference host that was **179 messages / 4.49 M tokens**
-in a single weekly run, which is a token bill and a Home Assistant restart-storm.
+The starting claim was that Z2M republishes its whole discovery tree on every start, and
+that those identical, retained payloads reach every subscriber again — on the reference
+host quoted as **179 messages / 4.49 M tokens** in one weekly run.
 
-The guard already knows when a restart was planned. Proxy mode is what turns that
-knowledge into a smaller storm: it sits between Z2M and the broker and drops a
-retained payload it has already forwarded inside the dedupe window.
+That hypothesis is **wrong for Z2M 2.x**, and the measurement below shows why. The mode
+is kept because it is still a correct, tested relay with an allowlist, will preservation
+and protocol fidelity — not because it saves tokens.
 
 ## Where it sits
 
@@ -53,11 +53,9 @@ proxy failure can never hide the guard's own entities from HA.
 
 ## Enabling it
 
-Either pull the proxy image, or build one yourself:
+No proxy image is published — build one yourself:
 
 ```bash
-docker pull ghcr.io/st0pfen/z2m-guard:<version>-proxy
-# or
 docker build --build-arg FEATURES=proxy -t z2m-guard:proxy .
 ```
 
@@ -81,12 +79,13 @@ dedupe_window_ms = 60000
 allow = ["zigbee2mqtt/#"]
 ```
 
-Then point Z2M at the proxy instead of the broker:
+Then point Z2M at the proxy instead of the broker — the setting lives in Z2M's own
+`configuration.yaml` on most installs (`--config` installs read it from there, not from
+`MQTT_SERVER`):
 
 ```yaml
-# docker-compose, zigbee2mqtt service
-environment:
-  MQTT_SERVER: mqtt://z2m-guard:1884
+mqtt:
+  server: mqtt://z2m-guard:1884
 ```
 
 A binary **without** `--features proxy` refuses `proxy.enabled = true` at startup
