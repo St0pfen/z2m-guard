@@ -13,7 +13,7 @@ guard do its job**, nothing else. No host metrics, no broker instrumentation.
 | `z2m_guard_outage_confirmed_total` | counter | unattributed outages that escalated (i.e. alarms that were allowed through) |
 | `z2m_guard_flaps_total` | counter | availability flaps seen |
 | `z2m_guard_mqtt_messages_total{kind="bridge"}` | counter | bridge-state messages consumed |
-| `z2m_guard_discovery_deduped_total` | counter | discovery payloads dropped as duplicates — **always 0 until the proxy mode (M5) exists** |
+| `z2m_guard_discovery_deduped_total` | counter | discovery payloads dropped as duplicates — stays 0 unless the proxy mode (M5) is enabled |
 | `z2m_guard_bridge_online_timestamp_seconds` | gauge | **milliseconds since guard start** of the last online transition, not a Unix timestamp |
 
 That last one is a name/meaning mismatch worth knowing before writing queries:

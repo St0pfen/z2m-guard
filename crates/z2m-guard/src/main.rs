@@ -73,6 +73,63 @@ async fn main() -> Result<()> {
     let metrics = Arc::new(Metrics::new());
     let (tx, rx) = mpsc::channel::<Command>(16);
 
+    // ---- optional proxy mode (M5) ---------------------------------------------
+    // Feature-gated *and* config-gated: a binary built without `--features proxy`
+    // must refuse `proxy.enabled = true` loudly instead of silently running the
+    // guard without the proxy a deployment believes is there.
+    #[cfg(not(feature = "proxy"))]
+    if cfg.proxy.enabled {
+        anyhow::bail!("proxy.enabled = true requires a build with --features proxy");
+    }
+
+    #[cfg(feature = "proxy")]
+    if cfg.proxy.enabled {
+        let listen: SocketAddr = cfg
+            .proxy
+            .listen
+            .parse()
+            .with_context(|| format!("invalid proxy.listen: {}", cfg.proxy.listen))?;
+        let upstream_url = cfg
+            .proxy
+            .upstream
+            .clone()
+            .unwrap_or_else(|| cfg.mqtt.url.clone());
+        let hp = guard_mqtt::parse_broker_url(&upstream_url)
+            .map_err(|e| anyhow::anyhow!("proxy upstream: {e}"))?;
+        let upstream: SocketAddr = tokio::net::lookup_host((hp.host.as_str(), hp.port))
+            .await
+            .with_context(|| format!("resolving proxy upstream {upstream_url}"))?
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("proxy upstream {upstream_url} resolved to nothing"))?;
+
+        let mut settings = guard_proxy::RelaySettings::new(upstream);
+        settings.allow = cfg.proxy.allow.clone();
+        settings.dedupe_window = std::time::Duration::from_millis(cfg.proxy.dedupe_window_ms);
+        settings.client_prefix = cfg.proxy.client_prefix.clone();
+        settings.username = Some(cfg.mqtt.username.clone());
+        settings.password = cfg.mqtt_password();
+
+        let pstats = Arc::new(guard_proxy::Stats::default());
+        // The proxy owns its counters; /metrics reads a snapshot once a second
+        // rather than sharing an atomic across crates.
+        let mirror = Arc::clone(&pstats);
+        let m = Arc::clone(&metrics);
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                m.set_discovery_deduped(mirror.deduped());
+            }
+        });
+
+        let serve_stats = Arc::clone(&pstats);
+        tokio::spawn(async move {
+            if let Err(e) = guard_proxy::serve(listen, settings, serve_stats).await {
+                tracing::error!(error = %e, "proxy listener stopped");
+            }
+        });
+        tracing::info!(%listen, %upstream, "proxy mode enabled");
+    }
+
     let bind: SocketAddr = cfg
         .http
         .bind

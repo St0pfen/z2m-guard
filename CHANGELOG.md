@@ -1,5 +1,47 @@
 # Changelog
 
+## Unreleased
+
+### M5 — proxy mode (implemented, measured, **premise disproved**)
+- The mode was built to dedupe discovery republish waves from Zigbee2MQTT. Measured on
+  the reference host, that wave does not come from Z2M: a real Z2M restart produced **1**
+  discovery publish, while the 106 retained `homeassistant/#` configs (97 132 bytes) are
+  delivered to every *consumer* that subscribes — i.e. Home Assistant on restart. A
+  proxy on the Z2M leg cannot see that traffic. **Not switched on in production**, because
+  it would add a single point of failure and a widened broker ACL for no gain.
+- Still useful as a tool: allowlist (fail closed), will preservation, protocol-level
+  fidelity, dedupe of repeated publishes when a script republishes.
+- Details, numbers and the open items: `docs/PROXY.md`.
+- `guard-proxy` is no longer a stub: a feature-gated MQTT relay that sits between
+  Zigbee2MQTT and the broker, preserves the client's protocol level and **will**,
+  enforces a topic allowlist (fail closed) and drops duplicate **retained** discovery
+  publishes inside a window, acknowledging QoS 1 itself so Z2M cannot retransmit them.
+- 18 unit and end-to-end tests against an in-process fake broker; two real defects
+  were found by them — a PUBACK written to the wrong socket (the client would block
+  forever) and an allowlist test that asserted the opposite of the intended coverage
+  semantics.
+- `[proxy]` config section, `--features proxy` build gate, and a startup refusal when
+  `proxy.enabled = true` meets a binary without the feature.
+- The `Dockerfile` gained `ARG FEATURES=""`. Before that the shipped image was compiled
+  without the feature, so proxy mode was unreachable in a container by construction — a
+  gap found only by building on the remote builder. No proxy image is published: build
+  one with `--build-arg FEATURES=proxy`.
+- CI now checks **both** sides of the gate: the plain image must refuse
+  `proxy.enabled = true`, the proxy image must open the listener.
+- **Measurement against the real stack** (broker log, last 7 days): Zigbee2MQTT speaks
+  MQTT 3.1.1, Home Assistant negotiates both 3.1.1 and 5.0. That immediately exposed
+  two MQTT 5 defects in the codec — a v5 client's will was parsed from the wrong offset
+  (the will property block was ignored) and the re-issued v5 CONNECT carried no will
+  property block at all. Both fixed, covered by tests, and verified live: a v5 client's
+  will reached the broker when the client was killed.
+- Throughput 10 296 msg/s through the proxy vs 11 212 direct (~8 % cost); the synthetic
+  discovery storm dropped 180 of 200 duplicate retained publishes with zero duplicates
+  at the broker; a `SIGKILL`ed proxy closes the socket immediately and the client
+  reconnects on its own.
+- Deliberately **not** released: Z2M's own reconnect behaviour through the proxy, a
+  load test with a real Z2M restart (the actual storm shape) and arm64 throughput are
+  still open. See `docs/PROXY.md`.
+
 ## 0.1.2 — 2026-11-14
 
 ### Security

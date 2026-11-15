@@ -15,6 +15,7 @@ pub struct Config {
     pub guard: GuardSection,
     pub homeassistant: HaSection,
     pub http: HttpSection,
+    pub proxy: ProxySection,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -77,6 +78,38 @@ impl Default for HaSection {
             discovery_prefix: "homeassistant".to_string(),
             device_name: "Z2M Guard".to_string(),
             discovery: true,
+        }
+    }
+}
+
+/// Optional MQTT proxy mode (M5). Off by default, and feature-gated at build time.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct ProxySection {
+    /// When true the guard also listens for a single MQTT client (Z2M) and relays
+    /// it to the broker, deduplicating discovery republishes.
+    pub enabled: bool,
+    /// Downstream listen address. Point Z2M's broker URL at this instead of the broker.
+    pub listen: String,
+    /// Broker to forward to. `None` = `mqtt.url`.
+    pub upstream: Option<String>,
+    /// Window inside which an identical retained payload is dropped.
+    pub dedupe_window_ms: u64,
+    /// Topic filters the downstream client may publish to and subscribe from.
+    pub allow: Vec<String>,
+    /// Prefix for the proxy's upstream client id.
+    pub client_prefix: String,
+}
+
+impl Default for ProxySection {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            listen: "0.0.0.0:1884".to_string(),
+            upstream: None,
+            dedupe_window_ms: 60_000,
+            allow: vec!["zigbee2mqtt/#".to_string()],
+            client_prefix: "z2m-guard-proxy".to_string(),
         }
     }
 }

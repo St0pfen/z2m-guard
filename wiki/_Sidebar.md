@@ -11,6 +11,7 @@
   - [Troubleshooting](Troubleshooting)
 - **Understanding it**
   - [How it decides](How-it-decides)
+  - [Proxy mode](Proxy-Mode)
   - [Architecture](https://github.com/St0pfen/z2m-guard/blob/main/docs/ARCHITECTURE.md)
   - [Security](https://github.com/St0pfen/z2m-guard/blob/main/SECURITY.md)
 - **Project**

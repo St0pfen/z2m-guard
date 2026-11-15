@@ -37,3 +37,12 @@ discovery = true
 # Keep it on the internal Docker network; no host port needed.
 bind = "0.0.0.0:8089"
 token_env = "Z2M_GUARD_HTTP_TOKEN"
+
+# Optional MQTT proxy (M5). Needs a build with --features proxy, and is not
+# validated yet — see docs/PROXY.md before touching it.
+# [proxy]
+# enabled = false
+# listen = "0.0.0.0:1884"          # Z2M points its MQTT_SERVER here
+# # upstream = "mqtt://172.22.1.50:1883"   # default: mqtt.url
+# dedupe_window_ms = 60000
+# allow = ["zigbee2mqtt/#"]

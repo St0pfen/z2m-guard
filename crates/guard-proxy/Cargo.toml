@@ -17,3 +17,8 @@ proxy = []
 
 [dependencies]
 guard-core = { path = "../guard-core" }
+tokio = { version = "1", features = ["net", "io-util", "time", "sync", "macros", "rt", "net"] }
+tracing = "0.1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "time", "sync"] }

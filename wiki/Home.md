@@ -55,6 +55,7 @@ To confirm it works without waiting for a real incident, follow the test plan in
 
 - **[Installation](Installation)** — compose, static binary + systemd, HAOS app, broker ACL, entities, upgrades
 - **[How it decides](How-it-decides)** — the state machine, the deadlines, and why suppression can never hide a real outage
+- **[Proxy mode](Proxy-Mode)** — the optional MQTT relay: what it does, and the measured reason it is not enabled anywhere
 - **[Configuration](Configuration)** — every key, its default, and the environment overrides
 - **[Home Assistant](Home-Assistant)** — the three entities, plus automations that stay quiet during planned restarts
 - **[Monitoring](Monitoring)** — the seven metric series, PromQL and alert rules
