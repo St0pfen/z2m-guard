@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed
+- `/metrics` reported `z2m_guard_bridge_online_timestamp_seconds` in **milliseconds**
+  despite the `_seconds` suffix, and never moved on an offline transition — so no query
+  could tell whether the bridge was up. Split into `z2m_guard_bridge_online` (gauge,
+  `1`/`0`, follows every bridge-state message) and `z2m_guard_bridge_last_online_seconds`
+  (seconds since guard start at the last online transition). An `Z2mGuardBridgeOffline`
+  alert rule now has a series that actually expresses the condition.
+
 ### M5 — proxy mode (implemented, measured, **premise disproved**)
 - The mode was built to dedupe discovery republish waves from Zigbee2MQTT. Measured on
   the reference host, that wave does not come from Z2M: a real Z2M restart produced **1**

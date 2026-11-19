@@ -28,7 +28,8 @@ pub struct Metrics {
     mqtt_bridge: AtomicU64,
     discovery_deduped: AtomicU64,
     window_active: AtomicBool,
-    bridge_online_since_ms: AtomicU64,
+    bridge_online: AtomicBool,
+    bridge_last_online_s: AtomicU64,
 }
 
 impl Metrics {
@@ -77,9 +78,18 @@ impl Metrics {
     }
 
     pub fn set_bridge_online(&self, online: bool, now_ms: u64) {
+        self.bridge_online.store(online, Ordering::Relaxed);
         if online {
-            self.bridge_online_since_ms.store(now_ms, Ordering::Relaxed);
+            self.bridge_last_online_s
+                .store(now_ms / 1_000, Ordering::Relaxed);
         }
+    }
+
+    /// Whether the last bridge-state message said `online`. Defaults to `false`
+    /// until the retained state arrives, so a guard that never heard from the
+    /// bridge does not claim it is healthy.
+    pub fn bridge_online(&self) -> bool {
+        self.bridge_online.load(Ordering::Relaxed)
     }
 
     /// Prometheus text exposition format (version 0.0.4).
@@ -133,11 +143,22 @@ impl Metrics {
             self.discovery_deduped.load(Ordering::Relaxed)
         ));
 
-        s.push_str("# HELP z2m_guard_bridge_online_timestamp_seconds Unix-like timestamp (ms since guard start) of the last online transition.\n");
-        s.push_str("# TYPE z2m_guard_bridge_online_timestamp_seconds gauge\n");
+        s.push_str("# HELP z2m_guard_bridge_online 1 while the bridge last reported online, 0 otherwise.\n");
+        s.push_str("# TYPE z2m_guard_bridge_online gauge\n");
         s.push_str(&format!(
-            "z2m_guard_bridge_online_timestamp_seconds {}\n",
-            self.bridge_online_since_ms.load(Ordering::Relaxed)
+            "z2m_guard_bridge_online {}\n",
+            u8::from(self.bridge_online())
+        ));
+
+        // Seconds, not milliseconds: the name says `_seconds`, and a series whose
+        // unit disagrees with its suffix is a trap for whoever writes the query.
+        // The value is still an offset since guard start, not a Unix timestamp —
+        // use it to compare against other guard-local timings.
+        s.push_str("# HELP z2m_guard_bridge_last_online_seconds Seconds since guard start at the last online transition.\n");
+        s.push_str("# TYPE z2m_guard_bridge_last_online_seconds gauge\n");
+        s.push_str(&format!(
+            "z2m_guard_bridge_last_online_seconds {}\n",
+            self.bridge_last_online_s.load(Ordering::Relaxed)
         ));
         s
     }
@@ -166,6 +187,29 @@ mod tests {
                 "malformed exposition line: {line}"
             );
         }
+    }
+
+    #[test]
+    fn bridge_online_gauge_follows_the_last_message() {
+        let m = Metrics::new();
+        // Retained state has not arrived yet: must not claim healthy.
+        assert!(m.render().contains("z2m_guard_bridge_online 0"));
+
+        m.set_bridge_online(true, 91_500);
+        let text = m.render();
+        assert!(text.contains("z2m_guard_bridge_online 1"));
+        // 91500 ms is 91 s, and the old name lied about the unit.
+        assert!(
+            text.contains("z2m_guard_bridge_last_online_seconds 91"),
+            "timestamp must be seconds, got: {text}"
+        );
+
+        m.set_bridge_online(false, 200_000);
+        assert!(m.render().contains("z2m_guard_bridge_online 0"));
+        // Offline must not move the marker; it records the last online transition.
+        assert!(m
+            .render()
+            .contains("z2m_guard_bridge_last_online_seconds 91"));
     }
 
     #[test]

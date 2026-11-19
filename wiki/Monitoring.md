@@ -4,7 +4,7 @@ Metrics are hand-rolled and exposed on `GET /metrics` in the Prometheus text for
 (0.0.4) — the binary stays dependency-light. They answer one question: **did the
 guard do its job**, nothing else. No host metrics, no broker instrumentation.
 
-## The seven series
+## The eight series
 
 | Series | Type | Meaning |
 |---|---|---|
@@ -14,11 +14,12 @@ guard do its job**, nothing else. No host metrics, no broker instrumentation.
 | `z2m_guard_flaps_total` | counter | availability flaps seen |
 | `z2m_guard_mqtt_messages_total{kind="bridge"}` | counter | bridge-state messages consumed |
 | `z2m_guard_discovery_deduped_total` | counter | discovery payloads dropped as duplicates — stays 0 unless the proxy mode (M5) is enabled |
-| `z2m_guard_bridge_online_timestamp_seconds` | gauge | **milliseconds since guard start** of the last online transition, not a Unix timestamp |
+| `z2m_guard_bridge_online` | gauge | `1` while the last bridge-state message said online, `0` otherwise (also `0` before the retained state arrives) |
+| `z2m_guard_bridge_last_online_seconds` | gauge | **seconds since guard start** at the last online transition, not a Unix timestamp (renamed from `..._timestamp_seconds`, which misleadingly reported milliseconds) |
 
-That last one is a name/meaning mismatch worth knowing before writing queries:
-`time() - z2m_guard_bridge_online_timestamp_seconds` is meaningless. Use it only as
-a within-process marker ("the bridge came back 42 s after the guard started").
+`z2m_guard_bridge_online` is the series to alert on. The timestamp exists only as a
+within-process marker ("the bridge came back 42 s after the guard started"); it is not
+an epoch value and `time() - …` is meaningless.
 
 ## Scraping
 
@@ -47,6 +48,13 @@ increase(z2m_guard_outage_confirmed_total[24h])
 # is a window open right now?
 z2m_guard_window_active
 
+# is the bridge online right now?
+z2m_guard_bridge_online
+
+# how long has the bridge been offline? (raw seconds since guard start at the last
+# online transition — no history without a range query, so alert on the gauge above)
+z2m_guard_bridge_last_online_seconds
+
 # is the guard even receiving bridge state? (flat counter means it is not)
 rate(z2m_guard_mqtt_messages_total{kind="bridge"}[1h])
 ```
@@ -73,6 +81,12 @@ groups:
         for: 5m
         annotations:
           summary: "Suppression window open for 5 min — the bridge is not reporting online"
+
+      - alert: Z2mGuardBridgeOffline
+        expr: z2m_guard_bridge_online == 0
+        for: 10m
+        annotations:
+          summary: "Bridge has reported offline for 10 min — suppress windows will not attribute restarts"
 
       - alert: Z2mGuardSilent
         expr: up{job="z2m-guard"} == 0
