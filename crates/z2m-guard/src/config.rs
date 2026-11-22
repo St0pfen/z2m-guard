@@ -162,6 +162,39 @@ impl Config {
         Ok(cfg)
     }
 
+    /// Rejects configurations that parse fine but cannot work.
+    ///
+    /// Everything here used to fail at a distance: an empty `mqtt.url` surfaced as
+    /// a rumqttc parse error, a mistyped `proxy.allow` filter as a proxy that
+    /// closed every Z2M session. A named startup error is cheaper than that.
+    pub fn validate(&self) -> Result<()> {
+        if self.mqtt.url.trim().is_empty() {
+            bail!("mqtt.url must not be empty");
+        }
+        if self.mqtt.client_id.trim().is_empty() {
+            bail!("mqtt.client_id must not be empty");
+        }
+        validate_topic_root(&self.mqtt.base_topic)?;
+
+        if self.proxy.enabled {
+            if self.proxy.allow.is_empty() {
+                bail!(
+                    "proxy.enabled = true but proxy.allow is empty: the proxy would \
+                     close every publish and subscription"
+                );
+            }
+            for filter in &self.proxy.allow {
+                if !guard_proxy::allow::is_valid_filter(filter) {
+                    bail!(
+                        "proxy.allow: {filter:?} is not a valid MQTT topic filter \
+                         (`#` must be the last level, `+` must be a whole level)"
+                    );
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn timings(&self) -> guard_core::Timings {
         guard_core::Timings {
             grace_ms: self.guard.grace_ms,
@@ -195,6 +228,24 @@ impl Config {
             )),
         }
     }
+}
+
+/// A topic *root* carries no wildcards and no empty levels: the guard builds
+/// `{root}/#` from it, so `zigbee2mqtt/#` here would produce `zigbee2mqtt/#/#`.
+fn validate_topic_root(root: &str) -> Result<()> {
+    if root.trim().is_empty() {
+        bail!("mqtt.base_topic must not be empty");
+    }
+    if root.starts_with('/') || root.ends_with('/') {
+        bail!("mqtt.base_topic {root:?} must not start or end with '/'");
+    }
+    if root.split('/').any(|level| level.is_empty()) {
+        bail!("mqtt.base_topic {root:?} must not contain an empty level");
+    }
+    if root.contains(['#', '+']) {
+        bail!("mqtt.base_topic {root:?} must not contain MQTT wildcards");
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -231,5 +282,58 @@ mod tests {
         assert_eq!(cfg.guard.grace_ms, 5_000);
         assert_eq!(cfg.guard.settle_ms, 20_000, "unset keys keep defaults");
         assert_eq!(cfg.http.bind, "127.0.0.1:8089");
+    }
+
+    #[test]
+    fn defaults_pass_validation() {
+        Config::default().validate().expect("defaults are valid");
+    }
+
+    #[test]
+    fn empty_mqtt_url_is_rejected() {
+        let mut cfg = Config::default();
+        cfg.mqtt.url = String::new();
+        let err = cfg.validate().expect_err("empty url must fail");
+        assert!(err.to_string().contains("mqtt.url"), "{err}");
+    }
+
+    #[test]
+    fn base_topic_with_wildcard_or_bad_shape_is_rejected() {
+        for bad in [
+            "",
+            "zigbee2mqtt/#",
+            "zigbee/+/state",
+            "/zigbee2mqtt",
+            "zigbee2mqtt/",
+            "zigbee//2mqtt",
+        ] {
+            let mut cfg = Config::default();
+            cfg.mqtt.base_topic = bad.to_string();
+            assert!(cfg.validate().is_err(), "{bad:?} must be rejected");
+        }
+        let mut nested = Config::default();
+        nested.mqtt.base_topic = "zigbee2mqtt/living-room".to_string();
+        nested.validate().expect("nested topic roots are fine");
+    }
+
+    #[test]
+    fn proxy_allow_is_checked_only_when_proxy_is_enabled() {
+        let mut cfg = Config::default();
+        cfg.proxy.allow = vec!["zigbee2mqtt#".to_string()];
+        cfg.validate()
+            .expect("inert proxy config must not block startup");
+
+        cfg.proxy.enabled = true;
+        let err = cfg
+            .validate()
+            .expect_err("bad filter must fail once enabled");
+        assert!(err.to_string().contains("proxy.allow"), "{err}");
+
+        cfg.proxy.allow = Vec::new();
+        let err = cfg.validate().expect_err("empty allowlist must fail");
+        assert!(err.to_string().contains("proxy.allow"), "{err}");
+
+        cfg.proxy.allow = vec!["zigbee2mqtt/#".to_string()];
+        cfg.validate().expect("default filter is valid");
     }
 }

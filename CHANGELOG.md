@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added
+- Startup config validation (`Config::validate`) runs after loading and before
+  anything binds: empty `mqtt.url`/`mqtt.client_id`, a `mqtt.base_topic` that is
+  not a topic root (wildcards, leading/trailing/doubled `/`) and, when
+  `proxy.enabled = true`, an empty or malformed `proxy.allow` are now named
+  startup errors instead of failures at a distance. `guard_proxy::allow::is_valid_filter`
+  checks the MQTT filter grammar, so a typo like `zigbee2mqtt#` — which the
+  matcher treats as one literal level and therefore matches nothing — is refused
+  up front rather than surfacing as "Z2M silently stopped working".
+
 ### Fixed
 - `/metrics` reported `z2m_guard_bridge_online_timestamp_seconds` in **milliseconds**
   despite the `_seconds` suffix, and never moved on an offline transition — so no query

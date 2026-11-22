@@ -120,3 +120,19 @@ docker run --rm -v "$PWD/config:/cfg:ro" --entrypoint /usr/local/bin/z2m-guard \
 `--print-discovery` exits before connecting to anything, so a wrong key in `[guard]`
 or `[homeassistant]` shows up here rather than as a crash-looping container in
 production.
+
+## Startup validation
+
+Before anything binds, the guard rejects a config that parsed but cannot work:
+
+- `mqtt.url` and `mqtt.client_id` must be non-empty,
+- `mqtt.base_topic` must be a topic *root*: no wildcards (`#`, `+`), no leading,
+  trailing or doubled `/`,
+- when `proxy.enabled = true`, `proxy.allow` must contain at least one entry and
+  every entry must be a syntactically valid MQTT filter (`#` only as the last
+  level, `+` only as a whole level).
+
+The last check exists because a typo like `zigbee2mqtt#` (missing slash) is a
+valid single literal level: the proxy would relay nothing and close every
+session, which looks like a broken bridge rather than a broken config. The
+error names the offending entry.
