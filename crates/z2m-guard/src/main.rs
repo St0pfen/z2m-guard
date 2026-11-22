@@ -70,6 +70,7 @@ async fn main() -> Result<()> {
         .init();
 
     let cfg = Config::load(cli.config.as_deref())?;
+    cfg.validate()?;
     let metrics = Arc::new(Metrics::new());
     let (tx, rx) = mpsc::channel::<Command>(16);
 

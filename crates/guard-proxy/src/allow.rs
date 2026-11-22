@@ -35,6 +35,37 @@ pub fn matches(filter: &str, topic: &str) -> bool {
     ti == t.len()
 }
 
+/// True when `filter` is a syntactically valid MQTT topic filter.
+///
+/// The matcher below would treat `zigbee2mqtt#` (a missing slash, the classic
+/// typo) as one literal level and match nothing at all, which inside the proxy
+/// looks like "Z2M is broken" rather than "the config is wrong". Validating the
+/// grammar up front turns that into a startup error naming the offending entry.
+///
+/// Rules: no empty filter and no empty level; `#` only as the last level, alone;
+/// `+` only as a whole level; a level containing a wildcard is not a literal.
+pub fn is_valid_filter(filter: &str) -> bool {
+    if filter.is_empty() {
+        return false;
+    }
+    let levels: Vec<&str> = filter.split('/').collect();
+    let last = levels.len() - 1;
+    levels.iter().enumerate().all(|(i, level)| {
+        if level.is_empty() {
+            return false;
+        }
+        if *level == "#" {
+            i == last
+        } else if level.contains('#') {
+            false
+        } else if level.contains('+') {
+            *level == "+"
+        } else {
+            true
+        }
+    })
+}
+
 /// Allows a *subscription filter*: every filter must be inside one of the
 /// allowlist entries. Comparing filter-to-filter is stricter than topic-to-filter
 /// on purpose — `zigbee2mqtt/#` may not be used to authorise `#`.
@@ -124,5 +155,46 @@ mod tests {
             "homeassistant/binary_sensor/x/config"
         ));
         assert!(!allows_topic(&allow(), "z2m_guard/state"));
+    }
+
+    #[test]
+    fn valid_filters_accept_the_grammar() {
+        for f in [
+            "zigbee2mqtt/#",
+            "#",
+            "+",
+            "zigbee2mqtt/+/set",
+            "homeassistant/status",
+            "$SYS/#",
+        ] {
+            assert!(is_valid_filter(f), "{f:?} should be valid");
+        }
+    }
+
+    #[test]
+    fn valid_filters_reject_typos_that_would_silently_match_nothing() {
+        for f in [
+            "",
+            "zigbee2mqtt#",      // missing slash: one literal level, no match
+            "zigbee2mqtt/",      // trailing empty level
+            "/zigbee2mqtt",      // leading empty level
+            "zigbee2mqtt//#",    // doubled separator
+            "zigbee2mqtt/#/set", // `#` must be the last level
+            "zigbee2mqtt/+x",    // `+` must be a whole level
+            "zigbee2mqtt/x+",    // `+` must be a whole level
+        ] {
+            assert!(!is_valid_filter(f), "{f:?} should be rejected");
+        }
+    }
+
+    #[test]
+    fn every_rejected_filter_matches_nothing_useful() {
+        // Guards the reason for the check: the old matcher accepted these without
+        // complaint and then dropped every topic, which is indistinguishable from a
+        // broken Z2M bridge.
+        assert!(!allows_topic(
+            &["zigbee2mqtt#".to_string()],
+            "zigbee2mqtt/bridge/state"
+        ));
     }
 }
