@@ -16,6 +16,7 @@ guard do its job**, nothing else. No host metrics, no broker instrumentation.
 | `z2m_guard_discovery_deduped_total` | counter | discovery payloads dropped as duplicates — stays 0 unless the proxy mode (M5) is enabled |
 | `z2m_guard_bridge_online` | gauge | `1` while the last bridge-state message said online, `0` otherwise (also `0` before the retained state arrives) |
 | `z2m_guard_bridge_last_online_seconds` | gauge | **seconds since guard start** at the last online transition, not a Unix timestamp (renamed from `..._timestamp_seconds`, which misleadingly reported milliseconds) |
+| `z2m_guard_mqtt_connected` | gauge | `1` while the daemon itself holds a broker connection, `0` otherwise; the same flag drives `GET /readyz` |
 
 `z2m_guard_bridge_online` is the series to alert on. The timestamp exists only as a
 within-process marker ("the bridge came back 42 s after the guard started"); it is not

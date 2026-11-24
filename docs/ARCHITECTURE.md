@@ -20,7 +20,7 @@ zigbee2mqtt ────►│ zigbee2mqtt/bridge/  │ retained {"state":"onlin
 │  └────────┬─────────┘    guard-docker (optional)          │
 │           │              die/start attribution           │
 │           ▼                                              │
-│  HTTP /healthz  /metrics  POST /v1/restart-intent        │
+│  HTTP /healthz /readyz /metrics POST /v1/restart-intent  │
 └──────────────────────────────────────────────────────────┘
 ```
 

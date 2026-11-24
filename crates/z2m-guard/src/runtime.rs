@@ -68,6 +68,7 @@ pub async fn run(
                                 Ok(MqttEvent::Incoming(Packet::ConnAck(_))) => {
                                     attempt = 0;
                                     connected_once = true;
+                                    metrics.set_mqtt_connected(true);
                                     info!("mqtt connected");
                                     publish_connected(&client, &cfg, &meta, &guard, &start).await;
                                 }
@@ -95,6 +96,7 @@ pub async fn run(
                                 Ok(_) => {}
                                 Err(e) => {
                                     warn!(error = %e, connected_once, "mqtt connection ended");
+                                    metrics.set_mqtt_connected(false);
                                     break;
                                 }
                             }
@@ -112,7 +114,12 @@ pub async fn run(
                     }
                 }
             }
-            Err(e) => warn!(error = %e, attempt, "cannot build mqtt client"),
+            Err(e) => {
+                // No client at all: `/readyz` must not stay `200` from a previous
+                // connection while the daemon cannot subscribe to anything.
+                metrics.set_mqtt_connected(false);
+                warn!(error = %e, attempt, "cannot build mqtt client");
+            }
         }
 
         // Reconnect pause. There is no client to publish through, but ticks and
@@ -341,6 +348,24 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
         check()
+    }
+
+    #[tokio::test]
+    async fn readiness_stays_false_while_the_broker_is_unreachable() {
+        let metrics = Arc::new(Metrics::new());
+        let (tx, rx) = mpsc::channel(8);
+        let task = tokio::spawn(run(unreachable_broker_cfg(), Arc::clone(&metrics), rx));
+
+        // Several connection attempts and ticks happen within this window; none of
+        // them may flip the readiness gauge, otherwise a container reports healthy
+        // while no bridge state is being observed.
+        tokio::time::sleep(Duration::from_millis(400)).await;
+        assert!(!metrics.mqtt_connected(), "readiness lied about the broker");
+
+        tx.send(Command::Shutdown).await.expect("send shutdown");
+        task.await
+            .expect("runtime task panicked")
+            .expect("runtime returned an error");
     }
 
     #[tokio::test]
