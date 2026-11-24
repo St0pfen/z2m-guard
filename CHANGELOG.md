@@ -3,6 +3,12 @@
 ## Unreleased
 
 ### Added
+- `GET /readyz` plus the `z2m_guard_mqtt_connected` gauge: readiness now follows
+  the guard's own broker link instead of always answering `200`. `/healthz` stays
+  a pure liveness probe on purpose — a broker outage must not get the daemon
+  restarted while its suppression windows still expire on the local clock. A
+  container healthcheck pointed at `/readyz` now notices a guard that cannot
+  observe the bridge instead of reporting healthy forever.
 - Startup config validation (`Config::validate`) runs after loading and before
   anything binds: empty `mqtt.url`/`mqtt.client_id`, a `mqtt.base_topic` that is
   not a topic root (wildcards, leading/trailing/doubled `/`) and, when

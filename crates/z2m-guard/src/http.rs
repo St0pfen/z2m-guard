@@ -66,6 +66,7 @@ pub fn router(state: AppState) -> Router {
     with_limits(
         Router::new()
             .route("/healthz", get(healthz))
+            .route("/readyz", get(readyz))
             .route("/metrics", get(metrics))
             // The only endpoint with a body, and its body is a few bytes of JSON.
             // Anything larger is a mistake or an attack.
@@ -97,6 +98,21 @@ where
 
 async fn healthz() -> impl IntoResponse {
     (StatusCode::OK, "ok\n")
+}
+
+/// Readiness: the process is up *and* has a broker link, so its verdict actually
+/// observes the bridge. Deliberately separate from `/healthz`, which stays a pure
+/// liveness probe — a broker outage must not make an orchestrator restart a
+/// daemon that is doing its job (windows still expire on the local clock).
+async fn readyz(State(state): State<AppState>) -> impl IntoResponse {
+    if state.metrics.mqtt_connected() {
+        (StatusCode::OK, "ready\n")
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "mqtt disconnected — not observing the bridge\n",
+        )
+    }
 }
 
 async fn metrics(State(state): State<AppState>) -> impl IntoResponse {
@@ -199,6 +215,17 @@ mod tests {
         assert!(constant_time_eq(b"", b""));
     }
 
+    fn app_state() -> (Router, mpsc::Receiver<Command>, Arc<Metrics>) {
+        let (tx, rx) = mpsc::channel(8);
+        let metrics = Arc::new(Metrics::new());
+        let state = AppState {
+            metrics: Arc::clone(&metrics),
+            tx,
+            token: None,
+        };
+        (router(state), rx, metrics)
+    }
+
     fn app_token(token: Option<&str>) -> (Router, mpsc::Receiver<Command>) {
         let (tx, rx) = mpsc::channel(8);
         let state = AppState {
@@ -207,6 +234,11 @@ mod tests {
             token: token.map(str::to_string),
         };
         (router(state), rx)
+    }
+
+    async fn status_of(app: Router, path: &str) -> StatusCode {
+        let req = Request::get(path).body(Body::empty()).expect("request");
+        app.oneshot(req).await.expect("response").status()
     }
 
     async fn post_intent(app: Router, token: &str, body: Body) -> StatusCode {
@@ -260,6 +292,33 @@ mod tests {
         let status = post_intent(app, "anything", Body::empty()).await;
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
         assert!(rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn readyz_reports_broker_link_state() {
+        let (app, _rx, metrics) = app_state();
+        // Nothing connected yet: the daemon is alive but cannot observe anything.
+        assert_eq!(
+            status_of(app.clone(), "/readyz").await,
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+
+        metrics.set_mqtt_connected(true);
+        assert_eq!(status_of(app.clone(), "/readyz").await, StatusCode::OK);
+
+        metrics.set_mqtt_connected(false);
+        assert_eq!(
+            status_of(app, "/readyz").await,
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+    }
+
+    #[tokio::test]
+    async fn healthz_stays_a_liveness_probe() {
+        // Liveness must not follow the broker: an unreachable broker is not a
+        // reason for the runtime to be killed and restarted.
+        let (app, _rx, _metrics) = app_state();
+        assert_eq!(status_of(app, "/healthz").await, StatusCode::OK);
     }
 
     #[tokio::test]

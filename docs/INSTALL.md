@@ -174,6 +174,9 @@ docker logs --tail 20 z2m-guard
 #   {"kind":"connected","state":"idle","ts_ms":2}
 
 docker exec prometheus wget -qO- http://z2m-guard:8089/healthz   # ok
+docker exec prometheus wget -qO- http://z2m-guard:8089/readyz    # ready
+#   /readyz answers 503 until the guard has an MQTT connection: that is the
+#   honest probe for a container healthcheck, /healthz only proves the process.
 docker exec prometheus wget -qO- http://z2m-guard:8089/metrics | grep z2m_guard_mqtt_messages_total
 #   z2m_guard_mqtt_messages_total{kind="bridge"} 1
 ```

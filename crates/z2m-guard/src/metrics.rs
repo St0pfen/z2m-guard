@@ -30,6 +30,7 @@ pub struct Metrics {
     window_active: AtomicBool,
     bridge_online: AtomicBool,
     bridge_last_online_s: AtomicU64,
+    mqtt_connected: AtomicBool,
 }
 
 impl Metrics {
@@ -69,6 +70,21 @@ impl Metrics {
 
     pub fn set_window_active(&self, active: bool) {
         self.window_active.store(active, Ordering::Relaxed);
+    }
+
+    /// Whether the daemon currently holds an MQTT connection to the broker.
+    ///
+    /// Set by the runtime when the connection is established/ended. Defaults to
+    /// `false` so a guard that never reached its broker does not look healthy:
+    /// without a link it cannot observe the bridge, and a suppression window
+    /// would only close on the local clock.
+    pub fn set_mqtt_connected(&self, connected: bool) {
+        self.mqtt_connected.store(connected, Ordering::Relaxed);
+    }
+
+    /// Drives `/readyz`; see [`Metrics::set_mqtt_connected`].
+    pub fn mqtt_connected(&self) -> bool {
+        self.mqtt_connected.load(Ordering::Relaxed)
     }
 
     /// Current suppression state — the runtime test asserts on this to prove a
@@ -150,6 +166,18 @@ impl Metrics {
             u8::from(self.bridge_online())
         ));
 
+        // Readiness, not bridge health: the gauge follows our own TCP link to the
+        // broker, so a daemon that lost its subscription stops advertising itself.
+        s.push_str("# HELP z2m_guard_mqtt_connected 1 while the daemon holds a broker connection.");
+        s.push('\n');
+        s.push_str("# TYPE z2m_guard_mqtt_connected gauge");
+        s.push('\n');
+        s.push_str(&format!(
+            "z2m_guard_mqtt_connected {}",
+            u8::from(self.mqtt_connected())
+        ));
+        s.push('\n');
+
         // Seconds, not milliseconds: the name says `_seconds`, and a series whose
         // unit disagrees with its suffix is a trap for whoever writes the query.
         // The value is still an offset since guard start, not a Unix timestamp —
@@ -210,6 +238,21 @@ mod tests {
         assert!(m
             .render()
             .contains("z2m_guard_bridge_last_online_seconds 91"));
+    }
+
+    #[test]
+    fn mqtt_connected_gauge_defaults_to_zero_and_follows_the_link() {
+        let m = Metrics::new();
+        assert!(
+            m.render().contains("z2m_guard_mqtt_connected 0"),
+            "a guard that never reached the broker must not claim connected"
+        );
+
+        m.set_mqtt_connected(true);
+        assert!(m.render().contains("z2m_guard_mqtt_connected 1"));
+
+        m.set_mqtt_connected(false);
+        assert!(m.render().contains("z2m_guard_mqtt_connected 0"));
     }
 
     #[test]

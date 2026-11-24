@@ -57,7 +57,14 @@ argument in [How it decides](How-it-decides) rests on it being small and finite.
 when it is missing or different. No token set (and no variable present) means
 intents are refused — the endpoint never becomes open by accident.
 
-Endpoints: `GET /healthz`, `GET /metrics`, `POST /v1/restart-intent`.
+Endpoints: `GET /healthz` (liveness, always `200` while the process runs),
+`GET /readyz` (`503` until the guard holds an MQTT connection — use this for a
+container healthcheck, so a daemon that lost its broker stops reporting ready),
+`GET /metrics`, `POST /v1/restart-intent`.
+
+`/readyz` deliberately does **not** follow the bridge itself: it asks whether the
+guard can observe the bridge, not whether the bridge is up. A `503` means "my
+verdict is not currently backed by broker state", not "Zigbee is broken".
 
 ## Environment overrides
 
