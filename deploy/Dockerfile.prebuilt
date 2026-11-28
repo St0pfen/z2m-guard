@@ -1,0 +1,18 @@
+# syntax=docker/dockerfile:1
+# Runtime image from a **prebuilt static binary**.
+#
+# Use this when compilation happens off-host (remote builder / CI export), so
+# the host never runs cargo:
+#
+#   docker buildx build --builder z2m-wsl -f deploy/Dockerfile.remote-exe \
+#     --target exe --output type=local,dest=dist/remote .
+#   mkdir -p .imgctx && cp dist/remote/z2m-guard deploy/Dockerfile.prebuilt .imgctx/
+#   docker build -f .imgctx/Dockerfile.prebuilt -t z2m-guard:local .imgctx
+#
+# The binary is statically linked against musl, so the image needs no libc at
+# all: `static-debian12` instead of `cc-debian12` drops glibc and ~3 MB.
+# `Dockerfile` (source build in-container) stays the path CI uses.
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY z2m-guard /usr/local/bin/z2m-guard
+USER nonroot:nonroot
+ENTRYPOINT ["/usr/local/bin/z2m-guard"]

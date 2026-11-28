@@ -1,0 +1,141 @@
+# Unit tests for z2m-guard.yml. CWD matters: rule_files are resolved against it,
+# so always run from this directory.
+#
+#   cd deploy/prometheus/rules/tests && promtool test rules z2m-guard.tests.yaml
+#   docker exec -w /etc/prometheus/rules/tests prometheus \
+#     promtool test rules z2m-guard.tests.yaml
+#
+# The file ends in .yaml on purpose: prometheus.yml loads *.yml, so the tests are
+# mounted but never evaluated as live rules.
+rule_files:
+  - ../z2m-guard.yml
+
+evaluation_interval: 1m
+
+tests:
+  # Guard scrapable, broker link up, bridge online: nothing may fire.
+  - interval: 1m
+    input_series:
+      - series: 'up{job="z2m-guard",instance="z2m-guard:8089"}'
+        values: '1x75'
+      - series: 'z2m_guard_mqtt_connected{instance="z2m-guard:8089"}'
+        values: '1x75'
+      - series: 'z2m_guard_bridge_online{instance="z2m-guard:8089"}'
+        values: '1x75'
+      - series: 'z2m_guard_window_active{instance="z2m-guard:8089"}'
+        values: '0x75'
+      - series: 'z2m_guard_outage_confirmed_total{instance="z2m-guard:8089"}'
+        values: '0x75'
+      - series: 'z2m_guard_flaps_total{instance="z2m-guard:8089"}'
+        values: '0x75'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: Z2mGuardDown
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: Z2mGuardWindowStuck
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: Z2mGuardBridgeOffline
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'up{job="z2m-guard",instance="z2m-guard:8089"}'
+        values: '0x12'
+    alert_rule_test:
+      # `for: 5m` — at 5m the pending period is complete.
+      - eval_time: 5m
+        alertname: Z2mGuardDown
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: z2m-guard
+              instance: z2m-guard:8089
+            exp_annotations:
+              summary: "z2m-guard is not scrapeable"
+              description: "z2m-guard:8089 has not answered /metrics for 5 minutes. Without the guard no restart suppression runs, so every Zigbee entity alarm fires on a container recreate."
+
+  - interval: 1m
+    input_series:
+      - series: 'z2m_guard_mqtt_connected{instance="z2m-guard:8089"}'
+        values: '0x12'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: Z2mGuardMqttDisconnected
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              instance: z2m-guard:8089
+            exp_annotations:
+              summary: "z2m-guard has no MQTT connection"
+              description: "The guard has held no broker connection for 5 minutes (z2m-guard:8089). Bridge state is not observed and /readyz reports 503."
+
+  - interval: 1m
+    input_series:
+      - series: 'z2m_guard_bridge_online{instance="z2m-guard:8089"}'
+        values: '0x6'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: Z2mGuardBridgeOffline
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              instance: z2m-guard:8089
+            exp_annotations:
+              summary: "Zigbee2MQTT bridge offline"
+              description: "zigbee2mqtt/bridge/state has reported offline for 2 minutes. All Zigbee entities are unavailable; a normal recreate takes only ~9 s."
+
+  # A window that never closes is the one failure that silences real alarms.
+  - interval: 1m
+    input_series:
+      - series: 'z2m_guard_window_active{instance="z2m-guard:8089"}'
+        values: '1x70'
+    alert_rule_test:
+      - eval_time: 66m
+        alertname: Z2mGuardWindowStuck
+        exp_alerts: []
+      - eval_time: 67m
+        alertname: Z2mGuardWindowStuck
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              instance: z2m-guard:8089
+            exp_annotations:
+              summary: "z2m-guard has been suppressing for more than 66 minutes"
+              description: "A suppression window has stayed open for more than 4000 s (contract maximum: 3600 s intent window + 35 s tail). Real outages are currently swallowed — restart the guard."
+
+  # One confirmed unattributed outage is enough to report it.
+  - interval: 1m
+    input_series:
+      - series: 'z2m_guard_outage_confirmed_total{instance="z2m-guard:8089"}'
+        values: '0x6 1x20'
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: Z2mGuardOutageConfirmed
+        exp_alerts:
+          - exp_labels:
+              severity: info
+              instance: z2m-guard:8089
+            exp_annotations:
+              summary: "Unattributed Zigbee outage in the last 15 minutes"
+              description: "The guard confirmed an outage it could not attribute (1 event(s)). Suppression has been released."
+
+  # 6 flaps per hour must trip, 5 must not.
+  - interval: 1m
+    input_series:
+      - series: 'z2m_guard_flaps_total{instance="z2m-guard:8089"}'
+        values: '0x61 6x11'
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: Z2mGuardFlapping
+        exp_alerts: []
+      - eval_time: 72m
+        alertname: Z2mGuardFlapping
+        exp_alerts:
+          - exp_labels:
+              severity: info
+              instance: z2m-guard:8089
+            exp_annotations:
+              summary: "Zigbee bridge is flapping (> 5 flaps/hour)"
+              description: "6 flap events in the last hour. Check mesh interference, the USB adapter and the Zigbee2MQTT log."

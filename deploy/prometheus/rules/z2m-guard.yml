@@ -1,0 +1,77 @@
+groups:
+  # z2m-guard: watches the watchdog itself.
+  #
+  # The guard is deliberately fail-safe: when it dies, the normal Zigbee alarms
+  # keep firing, because suppression is never unbounded. The dangerous direction
+  # is silence — a stuck suppression window would swallow real outages, and a
+  # guard without a broker link observes nothing at all. None of those three
+  # conditions reported to anyone before these rules existed.
+  - name: z2m-guard
+    rules:
+      # Container is up but the HTTP endpoint does not answer: hung runtime loop
+      # or a blocked bind. ContainerDown (cAdvisor) cannot see this, because the
+      # process still exists.
+      - alert: Z2mGuardDown
+        expr: up{job="z2m-guard"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "z2m-guard is not scrapeable"
+          description: "{{ $labels.instance }} has not answered /metrics for 5 minutes. Without the guard no restart suppression runs, so every Zigbee entity alarm fires on a container recreate."
+
+      # Broker link gone: from now on the guard does not observe the bridge. Open
+      # windows still expire on the local clock (no unbounded suppression), but
+      # new flaps go unseen.
+      - alert: Z2mGuardMqttDisconnected
+        expr: z2m_guard_mqtt_connected == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "z2m-guard has no MQTT connection"
+          description: "The guard has held no broker connection for 5 minutes ({{ $labels.instance }}). Bridge state is not observed and /readyz reports 503."
+
+      # The bridge itself is gone. A planned recreate measures ~9 s, so anything
+      # beyond 2 minutes is a real outage and not measurement noise.
+      - alert: Z2mGuardBridgeOffline
+        expr: z2m_guard_bridge_online == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Zigbee2MQTT bridge offline"
+          description: "zigbee2mqtt/bridge/state has reported offline for 2 minutes. All Zigbee entities are unavailable; a normal recreate takes only ~9 s."
+
+      # The one failure that silences alarms: a window that never closes.
+      # Contract maximum is a 1 h intent window plus 15 s grace and 20 s settle;
+      # 4000 s sits above that, so every hit is a bug and not a measurement.
+      - alert: Z2mGuardWindowStuck
+        expr: z2m_guard_window_active == 1
+        for: 4000s
+        labels:
+          severity: warning
+        annotations:
+          summary: "z2m-guard has been suppressing for more than 66 minutes"
+          description: "A suppression window has stayed open for more than 4000 s (contract maximum: 3600 s intent window + 35 s tail). Real outages are currently swallowed — restart the guard."
+
+      # The guard gave up attribution: an outage nobody announced. info, because
+      # the Zigbee alarm chain already fires for this on its own.
+      - alert: Z2mGuardOutageConfirmed
+        expr: increase(z2m_guard_outage_confirmed_total[15m]) > 0
+        labels:
+          severity: info
+        annotations:
+          summary: "Unattributed Zigbee outage in the last 15 minutes"
+          description: "The guard confirmed an outage it could not attribute ({{ printf \"%.0f\" $value }} event(s)). Suppression has been released."
+
+      # 3 toggles within 60 s count as one flap event. More than 5 per hour is no
+      # longer a restart, but an unstable mesh or a flapping bridge.
+      - alert: Z2mGuardFlapping
+        expr: increase(z2m_guard_flaps_total[1h]) > 5
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "Zigbee bridge is flapping (> 5 flaps/hour)"
+          description: "{{ printf \"%.0f\" $value }} flap events in the last hour. Check mesh interference, the USB adapter and the Zigbee2MQTT log."

@@ -466,6 +466,23 @@ Series worth an alert: `z2m_guard_outage_confirmed_total` increasing, and
 means the guard is not receiving bridge state). A ready-made dashboard is in
 `deploy/grafana/z2m-guard.json`.
 
+Ready-made alert rules: `deploy/prometheus/rules/z2m-guard.yml` — six rules on the
+guard's own metrics (`Z2mGuardDown`, `Z2mGuardMqttDisconnected`,
+`Z2mGuardBridgeOffline`, `Z2mGuardWindowStuck`, `Z2mGuardOutageConfirmed`,
+`Z2mGuardFlapping`). Copy the file into the directory Prometheus loads
+(`rule_files`), reload, then prove the expressions before trusting them:
+
+```bash
+promtool check rules /etc/prometheus/rules/z2m-guard.yml
+( cd deploy/prometheus/rules/tests && promtool test rules z2m-guard.tests.yaml )
+curl -X POST http://localhost:9090/-/reload
+```
+
+The unit tests end in `.yaml` on purpose: a `*.yml` glob in `rule_files` must not
+pick them up as live rules. They resolve `../z2m-guard.yml`, so run them from their
+own directory (or `docker exec -w /etc/prometheus/rules/tests prometheus promtool
+test rules z2m-guard.tests.yaml` on a deployed setup).
+
 Scraping over the internal network keeps `/metrics` off the host — the guard
 publishes no ports at all.
 

@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1
+# Builds the static musl binary for release and exports it to the caller's
+# filesystem instead of an image.
+#
+# Why this exists: the reference host must not compile Rust. Build it on a
+# remote builder and pull only the artifact:
+#
+#   docker buildx build --builder z2m-wsl -f deploy/Dockerfile.remote-exe \
+#     --target exe --output type=local,dest=dist/remote .
+#
+# Same toolchain image and musl setup as deploy/Dockerfile.artifacts, minus
+# cargo-cyclonedx (the SBOM is a release step, not a build step).
+FROM rust:1.100-slim AS build
+WORKDIR /src
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends musl-tools \
+ && rm -rf /var/lib/apt/lists/* \
+ && rustup target add x86_64-unknown-linux-musl
+
+COPY Cargo.toml Cargo.lock ./
+COPY crates ./crates
+COPY config ./config
+
+RUN cargo build --release --target x86_64-unknown-linux-musl -p z2m-guard
+
+# `--output type=local` turns this stage into plain files on the calling host.
+FROM scratch AS exe
+COPY --from=build /src/target/x86_64-unknown-linux-musl/release/z2m-guard /z2m-guard
